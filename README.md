@@ -8,15 +8,21 @@ Optimized for Bootstrap 4.0.
 
 ## Features
 
-- Shows a list of recent invoices
-- Display an alert in case of non-payment
-- Show active subscriptions
-- Show active cards, and add new ones
+- List of recent invoices
+- Display alert in case of non-payment
+- List active subscription plans
+- List active cards, update current one
 - 
+
+*Future*
+- Webhook for handling non-payments
+- Webhook popups
+- Upgrade popups
+- Button disable subscription
 
 ### Notes
 
-- req.user must contain a valid user object, with either `user.stripeCustomerId` or `stripe.customerId` defined
+- req.user must contain a valid user object, with either `user.stripeCustomerId` or `user.stripe.customerId` defined
 - doesn't support metered billing for now
 
 ## Usage
