@@ -1,0 +1,67 @@
+<% if (invoices.find(invoice => invoice.unpaid)) { %>
+	<div class="alert alert-danger" role="alert">
+		We couldn't bill your card for the latest period. Please <b>update your card now</b> to keep your subscription active and your account from being deleted.<br>If you need assistance, please contact us.
+	</div>
+<% } %>
+
+<% if (subscriptions.length) { %> 
+	<p><b>Plans</b></p>
+	<br>
+	<% for (let subscription of subscriptions) { %>
+		<p>Plan: <b><%= `${(subscription.plan.amount/100).toFixed(2)} ${subscription.plan.currency.toUpperCase()} every ${subscription.plan.interval_count} ${subscription.plan.interval}` %></b></p>
+		<p><%= `Last payment: ${subscription.current_period_start} - Next payment: ${subscription.current_period_end} ` %></p>
+	<% } %>
+<% } %>
+
+
+<% if (sources.length) { %> 
+	<p><b>Payment method</b></p>
+	<a class='btn btn-primary' href="javascript:" onclick="$('#cardForm').show()">replace card</a>	
+<% } else { %>
+	<p>No cards on record. Please add one first.</p>
+	<br>
+<% } %>
+
+<form action="/billing/card" style='<%= sources.length ? "display:none" : "" %>' method="post" id="cardForm">
+	<div id="cardErrors" class='error' role="alert"></div>
+	
+	<div class='row'>
+		<div class='col pl-3'>
+			<div id="cardElement" class='form-control'>
+			
+			</div>
+		</div>
+
+		<div class='col-3'>
+			<input type='submit' class='btn btn-primary' value="Update card" />
+		</div>
+	</div>
+
+	<input type="hidden" id="stripeToken" name="stripeToken" />
+</form>
+
+
+<ul class="list-group py-3">
+	<% for (let source of sources) { %>
+	<li class="list-group-item">
+		<p><%= source.brand %> card - (exp. <span class="badge badge-primary"><%= source.exp_year %></span> ends with <span class="badge badge-primary"><%= source.last4 %></span>)</p>
+	</li>
+	<% } %>
+</ul>
+
+<p><b>Your Invoices</b></p>
+
+<ul class="list-group py-3">				
+	<% for (let invoice of invoices) { %>
+		<li class="list-group-item">
+			<p>
+				<b><%= invoice.amount %></b> for <%= invoice.periodStart %> → <%= invoice.periodEnd %> 
+				<span class="badge badge-<%= invoice.status === 'paid' ? 'success' : ( invoice.unpaid ? 'danger' : 'warning') %>"><%= invoice.unpaid ? 'payment failed, please update card' : invoice.status %>
+				</p>
+
+			<% if (invoice.invoice_pdf) { %>
+				<a target='_blank' href='<%= invoice.invoice_pdf %>'>↓ Download .pdf</a>
+			<% } %>
+		</li>
+	<% } %>
+</ul>
