@@ -15,7 +15,7 @@ let billing = {
 			var head = document.getElementsByTagName('head')[0]
 			var script = document.createElement('script')
 			script.type = 'text/javascript'
-			script.onload = function() { initStripe() }
+			script.onload = () => { initStripe() }
 			script.src = 'https://js.stripe.com/v3/'
 			head.appendChild(script)
 			callback()

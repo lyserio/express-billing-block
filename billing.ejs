@@ -193,7 +193,7 @@
 		let elements1 = stripe.elements()
 		let card1 = elements1.create('card', options)
 		card1.mount('#upgradeForm .card-element')
-		card1.addEventListener('change', function(event) {
+		card1.addEventListener('change', (event) => {
 			 $('#upgradeForm .card-errors').text(event.error ? event.error.message : '')
 		})
 		<% } %>
@@ -218,12 +218,12 @@
 			})
 		}
 
-		$('#upgradeForm').submit(function(event) {
+		$('#upgradeForm').submit((event) => {
 			event.preventDefault()
 			$('#upgradeForm button .spinner-border').show()
 
 			<% if (!sources.length) { %>
-			stripe.createToken(card1).then(function(result) {
+			stripe.createToken(card1).then((result) => {
 
 				if (result.error) return $('#upgradeForm .card-errors').text(result.error.message)
 
@@ -238,7 +238,7 @@
 		let elements2 = stripe.elements()
 		let card2 = elements2.create('card', options)
 		card2.mount('#cardForm .card-element')
-		card2.addEventListener('change', function(event) {
+		card2.addEventListener('change', (event) => {
 			$('#cardForm .card-errors').text(event.error ? event.error.message : '')
 		})
 
@@ -247,7 +247,7 @@
 			event.preventDefault()
 			$('#cardForm button .spinner-border').show()
 
-			stripe.createToken(card2).then(function(result) {
+			stripe.createToken(card2).then((result) => {
 
 				if (result.error) return $('#cardForm .card-errors').text(result.error.message)
 
@@ -255,13 +255,11 @@
 			
 				$.post('/billing/card', {
 					stripeToken: token
-				}, function(data) {
+				}, (data) => {
 
 					$('#cardModal').modal('hide')
-					
-					alert("Card successfully added!")
 
-					billing.reload()
+					billing.reload("#billingSection")
 				
 				}).fail(e => {
 					alert("We couldn't add your card. Please try again or with another card.")
