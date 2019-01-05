@@ -4,64 +4,273 @@
 	</div>
 <% } %>
 
-<% if (subscriptions.length) { %> 
-	<p><b>Plans</b></p>
-	<br>
+<% if (subscriptions.length) { %>
+
 	<% for (let subscription of subscriptions) { %>
-		<p>Plan: <b><%= `${(subscription.plan.amount/100).toFixed(2)} ${subscription.plan.currency.toUpperCase()} every ${subscription.plan.interval_count} ${subscription.plan.interval}` %></b></p>
-		<p><%= `Last payment: ${subscription.current_period_start} - Next payment: ${subscription.current_period_end} ` %></p>
+
+		<p>Your <b><%= options.plans.find(p => p.stripeId === subscription.plan.id).name %></b> plan is set to <b><%= subscription.plan.amount %> per <%= subscription.plan.interval_count !== 1 ? subscription.plan.interval_count : '' %> <%= subscription.plan.interval %></b> and will renew <b><%= subscription.currentPeriodEnd %></b>.</p>
+
 	<% } %>
+
+	<% if (options.upgradable && options.plans.find(p => p.order > options.plans.find(a => a.id === user.plan).order) ) { %>
+		<button type="button" class="btn btn-sm btn-outline-success" data-toggle="modal" data-target="#upgradeModal">Upgrade your plan 🚀</button>
+		<br>
+	<% } %>
+
+<% } else if (options.upgradable) { %>
+	<button type="button" class="btn btn-outline-success" data-toggle="modal" data-target="#upgradeModal">Upgrade your plan 🚀</button>
+	<br>
 <% } %>
+
+<br>
 
 
 <% if (sources.length) { %> 
 	<p><b>Payment method</b></p>
-	<a class='btn btn-primary' href="javascript:" onclick="$('#cardForm').show()">replace card</a>	
-<% } else { %>
-	<p>No cards on record. Please add one first.</p>
+	
+	<button type="button" class="btn btn-sm btn-primary" data-toggle="modal" data-target="#cardModal">Add a new card</button>
+
+	<ul class="list-group py-3">
+		<% for (let source of sources) { %>
+			<li class="list-group-item d-flex justify-content-between align-items-center">
+
+				<span><%= source.brand %> <b>···· ···· ····</b> <%= source.last4 %> <span class="badge badge-warning">exp <%= source.exp_year %></span></span>
+				
+				<% if (source.isDefault) { %><span class="badge badge-primary">default</span> <% } %>
+
+			</li>
+		<% } %>
+	</ul>
+
 	<br>
+
+<% } else { %>
+	<p>No cards on record. <a href='javascript:' data-toggle="modal" data-target="#cardModal">Click to add a card</a>.</p>
 <% } %>
 
-<form action="/billing/card" style='<%= sources.length ? "display:none" : "" %>' method="post" id="cardForm">
-	<div id="cardErrors" class='error' role="alert"></div>
-	
-	<div class='row'>
-		<div class='col pl-3'>
-			<div id="cardElement" class='form-control'>
-			
-			</div>
-		</div>
-
-		<div class='col-3'>
-			<input type='submit' class='btn btn-primary' value="Update card" />
-		</div>
-	</div>
-
-	<input type="hidden" id="stripeToken" name="stripeToken" />
-</form>
 
 
-<ul class="list-group py-3">
-	<% for (let source of sources) { %>
-	<li class="list-group-item">
-		<p><%= source.brand %> card - (exp. <span class="badge badge-primary"><%= source.exp_year %></span> ends with <span class="badge badge-primary"><%= source.last4 %></span>)</p>
-	</li>
-	<% } %>
-</ul>
+<% if (invoices.length) { %> 
+	<p><b>Billing history</b></p>
 
-<p><b>Your Invoices</b></p>
-
-<ul class="list-group py-3">				
-	<% for (let invoice of invoices) { %>
-		<li class="list-group-item">
-			<p>
-				<b><%= invoice.amount %></b> for <%= invoice.periodStart %> → <%= invoice.periodEnd %> 
-				<span class="badge badge-<%= invoice.status === 'paid' ? 'success' : ( invoice.unpaid ? 'danger' : 'warning') %>"><%= invoice.unpaid ? 'payment failed, please update card' : invoice.status %>
+	<ul class="list-group py-3">				
+		<% for (let invoice of invoices) { %>
+			<li class="list-group-item d-flex justify-content-between align-items-center">
+				<p class='m-0'>
+					Invoice for <b><%= invoice.amount %></b>
+					<span class="badge badge-<%= invoice.status === 'paid' ? 'success' : ( invoice.unpaid ? 'danger' : 'warning') %>"><%= invoice.unpaid ? 'payment failed, please update card' : invoice.status %></span>
+					<br>
+					<small><%= invoice.cleanPeriodStart %> → <%= invoice.cleanPeriodEnd %></small>
 				</p>
 
-			<% if (invoice.invoice_pdf) { %>
-				<a target='_blank' href='<%= invoice.invoice_pdf %>'>↓ Download .pdf</a>
-			<% } %>
-		</li>
-	<% } %>
-</ul>
+				<% if (invoice.invoice_pdf) { %>
+					<a target='_blank' href='<%= invoice.invoice_pdf %>'>↓ Download</a>
+				<% } %>
+			</li>
+		<% } %>
+	</ul>
+<% } %>
+
+<!-- Card Modal -->
+<div class="modal fade" id="cardModal" tabindex="-2" role="dialog" aria-hidden="true">
+	<div class="modal-dialog modal-dialog-centered" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				
+				<h5 class="modal-title">Add a new card</h5>
+				
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+					<span aria-hidden="true">&times;</span>
+				</button>
+
+			</div>
+			<form id="cardForm">
+				<div class="modal-body">
+					<div class="container-fluid">
+
+						<p><small>Credit cards and debit cards are supported.</small></p>
+
+						<div class='card-element form-control'></div>
+						<div class='card-errors error' role="alert"></div>
+					
+						<br><br>
+						
+						<div class="d-flex justify-content-between align-items-center">
+							<p><small>Card secured with <a href='https://stripe.com'>Stripe</a>.</small></p>
+
+							<button type="submit" class="btn btn-primary">
+								<span style='display:none' class="spinner-border spinner-border-sm"></span>
+								<span>Add</span>
+							</button>
+						</div>
+					</div>
+				</div>
+				
+			</form>
+		</div>
+	</div>
+</div>
+
+<% if (options.upgradable) { %>
+<!-- Upgrade Modal -->
+<div class="modal fade" id="upgradeModal" tabindex="-1" role="dialog" aria-hidden="true">
+	<div class="modal-dialog modal-dialog-centered" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				
+				<h5 class="modal-title">Upgrade your account 🚀</h5>
+				
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+					<span aria-hidden="true">&times;</span>
+				</button>
+
+			</div>
+			<form id='upgradeForm'>
+			<div class="modal-body">
+				<div class="container-fluid">
+					<div class="row">
+
+						<% for (let plan of options.plans.filter(p => user.plan !== p.id)) { %>
+							<div class="col p-2">
+								<input type='radio' id='<%= plan.id %>-choice' name='upgradePlan' value='<%= plan.id %>' checked></input>
+								<label for='<%= plan.id %>-choice'><b><%= plan.name %></b></label>
+
+								<p>$<%= plan.price %>.00 / month</p>
+								<ul>
+									<% for (let gig of plan.advantages) { %>
+										<li><%= gig %></li>
+									<% } %>
+								</ul>
+							</div>
+						<% } %>
+					</div>
+
+					<% if (subscriptions.length) { %>
+						
+						<p><small>Your existing subscription will be adjusted to the new amount.</small></p>
+
+					<% } %>
+
+					<% if (!sources.length) { %>
+						<div class='card-element form-control'></div>
+						<div class='card-errors error' role="alert"></div>
+					<% } %>
+
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button type="submit" class="btn btn-primary">
+					<span style='display:none' class="spinner-border spinner-border-sm" role="status"></span>
+					<span>Upgrade 🚀</span>
+				</button>
+			</div>
+			</form>
+		</div>
+	</div>
+</div>
+<% } %>
+
+<script>
+
+	function initStripe() {
+
+		let stripe = Stripe("<%= options.publicKey %>")
+
+		// Create an instance of the card Element.
+		let options = { style: {
+			base: {
+				fontSmoothing: 'antialiased',
+				fontSize: '16px'
+			},
+			invalid: {
+				color: '#fa755a',
+				iconColor: '#fa755a'
+			}
+		}}
+
+		<% if (!sources.length) { %>
+
+		let elements1 = stripe.elements()
+		let card1 = elements1.create('card', options)
+		card1.mount('#upgradeForm .card-element')
+		card1.addEventListener('change', function(event) {
+			 $('#upgradeForm .card-errors').text(event.error ? event.error.message : '')
+		})
+		<% } %>
+
+		function submitUpgrade(token) {
+
+			$.post('/billing/upgrade', {
+				stripeToken: token,
+				upgradePlan: $('[name="upgradePlan"]').val()
+			}, function(data) {
+
+				$('#upgradeModal').modal('hide')
+
+				alert("Account successfully upgraded!")
+
+				// Reload without parameters
+				window.location = window.location.pathname
+			
+			}).fail(e => {
+				alert("We couldn't upgrade your account. Please try again later or with another card.")
+				console.error(e)
+			})
+		}
+
+		$('#upgradeForm').submit(function(event) {
+			event.preventDefault()
+			$('#upgradeForm button .spinner-border').show()
+
+			<% if (!sources.length) { %>
+			stripe.createToken(card1).then(function(result) {
+
+				if (result.error) return $('#upgradeForm .card-errors').text(result.error.message)
+
+				let token = result.token.id
+				submitUpgrade(token)
+			})
+			<% } else  { %>
+				submitUpgrade(null)
+			<% } %>
+		})
+		
+		let elements2 = stripe.elements()
+		let card2 = elements2.create('card', options)
+		card2.mount('#cardForm .card-element')
+		card2.addEventListener('change', function(event) {
+			$('#cardForm .card-errors').text(event.error ? event.error.message : '')
+		})
+
+
+		$('#cardForm').submit(function(event) {
+			event.preventDefault()
+			$('#cardForm button .spinner-border').show()
+
+			stripe.createToken(card2).then(function(result) {
+
+				if (result.error) return $('#cardForm .card-errors').text(result.error.message)
+
+				let token = result.token.id
+			
+				$.post('/billing/card', {
+					stripeToken: token
+				}, function(data) {
+
+					$('#cardModal').modal('hide')
+					
+					alert("Card successfully added!")
+
+					billing.reload()
+				
+				}).fail(e => {
+					alert("We couldn't add your card. Please try again or with another card.")
+					console.error(e)
+				})
+
+			})
+		})
+
+	}
+
+</script>
