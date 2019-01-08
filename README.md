@@ -12,10 +12,10 @@ The goal is to be a drop-in helper for handling and managing Stripe subscription
 - [x] Display alert in case of non-payment
 - [x] List active subscription plans
 - [x] List active cards, update current one
-- [] Webhook for handling non-payments
-- [] Webhook popups
-- [] Upgrade popups
-- [] Button disable subscription
+- [x] Upgrade popups
+- [ ] Webhook for handling non-payments
+- [ ] Webhook popups
+- [ ] Button disable subscription
 
 ### Notes
 
@@ -26,13 +26,13 @@ The goal is to be a drop-in helper for handling and managing Stripe subscription
 
 Install the library
 
-> npm i express-billing-page
+```bash
+npm i express-billing-page
+```
 
 Server code:
 
 ```javascript
-const billingPage = require('express-billing-page')
-
 app.use('/billing', require('express-billing-page')({
 	mongoUser: db.User,
 	secretKey: "sk_live_xxxxxxxxxxxxxxxxxxxxxxx",
