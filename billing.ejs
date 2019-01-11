@@ -6,7 +6,7 @@
 
 <% if (subscriptions.length) { %>
 
-	<% for (let subscription of subscriptions) { %>
+	<% for (let subscription of subscriptions.filter(sub => sub.plan)) { %>
 
 		<p>Your <b><%= options.plans.find(p => p.stripeId === subscription.plan.id).name %></b> plan is set to <b><%= subscription.plan.amount %> per <%= subscription.plan.interval_count !== 1 ? subscription.plan.interval_count : '' %> <%= subscription.plan.interval %></b> and will renew <b><%= subscription.currentPeriodEnd %></b>.</p>
 

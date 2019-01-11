@@ -3,7 +3,7 @@ const Stripe 	= require("stripe")
 const express 	= require("express")
 const router 	= express.Router()
 const ejs 		= require("ejs")
-const mailgun 	= require("mailgun.js")
+//const mailgun 	= require("mailgun.js")
 
 let options = {}
 
@@ -36,10 +36,12 @@ const billing = async (customerId, user) => {
 		sub.currentPeriodStart = moment(sub.current_period_start * 1000).format("ll")
 		sub.currentPeriodEnd = moment(sub.current_period_end * 1000).format("ll")
 		
-		sub.plan.amount = (sub.plan.amount / 100).toLocaleString('en-US', { 
-			style: 'currency', 
-			currency: 'USD'
-		})
+		if (sub.plan) { 
+			sub.plan.amount = (sub.plan.amount / 100).toLocaleString('en-US', { 
+				style: 'currency', 
+				currency: 'USD'
+			})
+		}
 
 		return sub
 	})
