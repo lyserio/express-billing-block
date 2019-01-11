@@ -28,7 +28,8 @@ const billing = async (customerId, user) => {
 	let sources = stripeCustomer.sources.data
 	let subscriptions = stripeCustomer.subscriptions.data
 
-	sources.find(s => s.id = stripeCustomer.default_source).isDefault = true
+	let defaultCard = sources.find(s => s.id = stripeCustomer.default_source)
+	if (defaultCard) defaultCard.isDefault = true
 
 	subscriptions = subscriptions.map(sub => {
 
