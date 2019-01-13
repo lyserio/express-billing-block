@@ -51,7 +51,9 @@ const billing = async (customerId, user) => {
 		limit: 5 
 	})
 
-	allInvoices = allInvoices.data.map(invoice => {
+	allInvoices = allInvoices.data
+	.filter(invoice => invoice.amount_due > 0)
+	.map(invoice => {
 		invoice.amount = (invoice.amount_due / 100).toLocaleString('en-US', { 
 			style: 'currency', 
 			currency: 'USD'
