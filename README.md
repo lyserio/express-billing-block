@@ -3,7 +3,9 @@
 *Still in alpha testing*
 
 A simple Express (4.0+) middleware for rendering billing pages to your users, directly connected to Stripe.
-Optimized for Bootstrap 4.0.
+
+Designed for use with Bootstrap 4.0 and jQuery.
+
 The goal is to be a drop-in helper for handling and managing Stripe subscriptions.
 
 ## Features
@@ -15,7 +17,7 @@ The goal is to be a drop-in helper for handling and managing Stripe subscription
 - [x] Upgrade popups
 - [ ] Webhook for handling non-payments
 - [ ] Webhook popups
-- [ ] Button disable subscription
+- [ ] Button to disable subscription
 
 ### Notes
 
@@ -38,6 +40,9 @@ app.use('/billing', require('express-billing-page')({
 	secretKey: "sk_live_xxxxxxxxxxxxxxxxxxxxxxx",
 	publicKey: "pk_live_xxxxxxxxxxxxxxxxxxxxxxx",
 	upgradable: true,
+	sendMail: (subject, text, email) => {
+		// Send a mail with the library of your choice
+	},
 	plans: [{
 		name: 'Hobby',
 		id: 'hobby',
@@ -57,7 +62,7 @@ app.use('/billing', require('express-billing-page')({
 
 ```
 
-Simple client code example with jQuery:
+Simple client code example (**jQuery & bootstrap.js are required**):
 
 ```javascript
 <div id='billing'></div>

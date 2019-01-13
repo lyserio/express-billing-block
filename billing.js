@@ -1,6 +1,6 @@
 let billing = {
 
-	reload: (selector, callback) => {
+	reload: (selector="billingSection", callback) => {
 		$(selector).html(`
 			<div class="d-flex align-items-center">
 				<p>Loading...</p>
@@ -12,13 +12,15 @@ let billing = {
 
 			$(selector).html(result)
 
+			// Load Stripe
 			var head = document.getElementsByTagName('head')[0]
 			var script = document.createElement('script')
 			script.type = 'text/javascript'
 			script.onload = () => { initStripe() }
 			script.src = 'https://js.stripe.com/v3/'
 			head.appendChild(script)
-			callback()
+			
+			if (callback)callback()
 
 		}).fail(e => {
 			console.error(e)

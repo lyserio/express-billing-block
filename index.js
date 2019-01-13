@@ -172,12 +172,9 @@ router.post('/upgrade', asyncHandler(async (req, res, next) => {
 
 	await dbUser.save()
 
-	// mg.messages.create('mg.nucleus.sh', {
-	// 	from: "Vince from Nucleus <vince@nucleus.sh>",
-	// 	to: [user.email],
-	// 	subject: "Welcome to Nucleus 🚀",
-	// 	text: `Hello,\n\nThis is a confirmation email that you have successfully upgraded your Nucleus account to the Pro plan :)\n\nIf you have any question or suggestion, just send me an email (or reply to this one).\n\nGlad to have you on board,\nVince`
-	// })
+	if (options.sendMail) {
+		options.sendMail("Thank you for upgrading 🚀", `Hello,\n\nThis is a confirmation email that you have successfully upgraded your account to the ${plan.name} plan :)\n\nIf you have any question or suggestion, just send me an email (or reply to this one).\n\nGlad to have you on board!`, user.email)
+	}
 
 	res.send({})
 
