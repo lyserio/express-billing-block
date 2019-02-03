@@ -1,0 +1,208 @@
+<head>
+	<title>Choose a plan</title>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+	<meta name="description" content="Choose a plan.">
+	<link rel="icon" type="image/png" href="/favicon.png" />
+	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+	<link rel="stylesheet" type="text/css" href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css">
+	<!--<link rel="stylesheet" type="text/css" href="https://use.fontawesome.com/releases/v5.6.3/css/all.css"  media="none" onload="if(media!='all')media='all'">-->
+	<style>
+	:root {
+		--input-padding-x: 1rem;
+		--input-padding-y: .75rem;
+	}
+	body {
+		background: #007bff;
+		background: <%= options.background || 'linear-gradient(to right, #0062E6, #33AEFF);' %>;
+		height: 100%;
+	}
+
+	.card-signin {
+		border: 0;
+		border-radius: 1rem;
+		box-shadow: 0 0.5rem 1rem 0 rgba(0, 0, 0, 0.1);
+	}
+
+	.card-signin .card-title {
+		margin-bottom: 2rem;
+		font-weight: 300;
+		font-size: 1.5rem;
+	}
+
+	.card-signin .card-body {
+		padding: 2rem;
+	}
+
+	.card-pricing.popular {
+		z-index: 1;
+		border: 3px solid #007bff;
+	}
+	.card-pricing .list-unstyled li {
+		padding: .5rem 0;
+		color: #6c757d;
+	}
+</style>
+</head>
+<body>
+	<div class="d-flex container h-100 justify-content-center align-items-center">
+		<div class="mx-auto">
+			<div class="card card-signin my-5">
+				<div class="card-body">
+					<h5 class="card-title text-center">Choose a plan</h5>
+					
+
+					<div id='errorAlert' style='display: none' class="alert alert-danger" role="alert"></div>
+
+					<form id='upgradeForm'>
+						<div class="modal-body">
+							<div class="container-fluid">
+								<div class="card-deck flex-column flex-md-row mb-3">
+									<% for (let plan of options.plans) { %>
+										<div data-plan='<%= plan.id %>' class="card card-pricing text-center px-3 mb-4"> <!-- add 'popular shadow' classes to select -->
+											<span class="h6 w-60 mx-auto px-4 py-1 rounded-bottom bg-primary text-white shadow-sm"><%= plan.name %></span>
+											<div class="bg-transparent card-header pt-4 border-0">
+												<h1 class="h1 font-weight-normal text-primary text-center mb-0" data-pricing-value="<%= plan.price %>">$<span class="price"><%= plan.price %></span><span class="h6 text-muted ml-2">/ per month</span></h1>
+											</div>
+											<div class="card-body pt-0">
+												<ul class="list-unstyled mb-4">
+													<% for (let gig of plan.advantages) { %>
+														<li><%= gig %></li>
+													<% } %>
+												</ul>
+
+												<button onclick='choosePlan("<%= plan.id %>")' type="button" class="btn btn-outline-primary mb-3">Choose</button>
+											</div>
+										</div>
+									<% } %>
+								</div>
+
+								<input type="hidden" name="plan" value="free">
+								
+
+								<div class="row">
+									<div class='col' id='cardStuff'>
+										<% if (subscriptions.length) { %>
+										
+											<p><small>Your existing subscription will be adjusted to the new amount.</small></p>
+
+										<% } %>
+
+										<% if (!sources.length) { %>
+											<div id='card-element' class='form-control'></div>
+											<div id='card-errors' class='text-danger' role="alert"></div>
+											<br>
+											<p><small>Your card is secured by Stripe.</small></p>
+										<% } %>
+									</div>
+
+									<div class="col">
+										<button type="submit" class="float-right btn btn-primary">
+											<span style='display:none' class="spinner-border spinner-border-sm" role="status"></span>
+											<span>Continue → </span>
+										</button>
+									</div>
+								</div>
+
+							</div>
+						</div>
+					</form>
+				</div>
+			</div>
+		</div>
+	</div>
+	<script src='https://code.jquery.com/jquery-3.3.1.min.js'></script>
+	<script src="https://js.stripe.com/v3/"></script>
+	<script>
+
+		const stripe = Stripe("<%= options.publicKey %>")
+
+		// Create an instance of the card Element.
+		let options = { style: {
+			base: {
+      			lineHeight: '1.5',
+				fontSmoothing: 'antialiased',
+				fontSize: '16px'
+			},
+			invalid: {
+				color: '#fa755a',
+				iconColor: '#fa755a'
+			}
+		}}
+
+		<% if (!sources || !sources.length) { %>
+
+			let elements1 = stripe.elements()
+			let card1 = elements1.create('card', options)
+			card1.mount('#card-element')
+			card1.addEventListener('change', (event) => {
+				$('#card-errors').text(event.error ? event.error.message : '')
+			})
+
+		<% } %>
+		
+		function submitUpgrade(token) {
+			let plan = $('[name="plan"]').val()
+			let userPlan = '<%= user.plan %>'
+
+			console.log(plan, userPlan)
+
+			if (plan === userPlan) return location.href = '<%= redirect %>'
+
+			$.post('/billing/upgrade', {
+				stripeToken: token,
+				upgradePlan: plan
+			}, function(data) {
+
+				// Reload without parameters
+				location.href = '<%= redirect %>'
+			
+			}).fail(e => {
+				$('#errorAlert').show()
+				$('#errorAlert').text(e.message)
+				console.error(e)
+			})
+
+		}
+
+		function choosePlan(plan) {
+			$('[data-plan]').removeClass(['shadow', 'popular'])
+			$('[data-plan="'+plan+'"]').addClass(['shadow', 'popular'])
+
+			$('[data-plan] button').removeClass(['btn-primary', 'btn-outline-primary'])
+
+			$('[data-plan]:not([data-plan="'+plan+'"]) button').addClass('btn-outline-primary')
+			$('[data-plan="'+plan+'"] button').addClass('btn-primary')
+
+			$('[name="plan"]').val(plan)
+
+			if (plan === 'free') $('#cardStuff').hide()
+			else $('#cardStuff').show()
+		}
+
+		choosePlan('<%= options.plans[0].id %>')
+
+
+		$('#upgradeForm').submit((event) => {
+			event.preventDefault()
+			$('#upgradeForm button .spinner-border').show()
+
+			<% if (!sources.length) { %>
+
+				let plan = $('[name="plan"]').val()
+
+				if (plan === 'free') return submitUpgrade(null)
+					
+				stripe.createToken(card1).then((result) => {
+
+					if (result.error) return $('#card-errors').text(result.error.message)
+
+					let token = result.token.id
+					submitUpgrade(token)
+				})
+
+			<% } else  { %>
+				submitUpgrade(null)
+			<% } %>
+		})
+	</script>
+</body>

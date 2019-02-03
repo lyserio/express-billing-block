@@ -125,7 +125,6 @@ router.post('/upgrade', asyncHandler(async (req, res, next) => {
 
 	if (!customerId && !token) return next("Sorry! We need a credit card to subscribe you.")
 
-
 	// If the customer doesn't have card or isn't a Stripe customer
 	if (token) { 
 		try {
@@ -192,6 +191,17 @@ router.post('/card', asyncHandler(async (req, res, next) => {
 	}
 
 	res.send({})
+}))
+
+router.get('/chooseplan', asyncHandler(async (req, res, next) => {
+
+	let customerId = res.locals.customerId
+
+	let data = await billing(customerId, req.user)
+
+	data.redirect = options.choosePlanRedirect
+
+	res.render(__dirname+'/chooseplan', data)
 }))
 
 router.get('/billing.js', (req, res, next) => {
