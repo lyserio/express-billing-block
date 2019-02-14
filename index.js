@@ -172,7 +172,7 @@ router.post('/upgrade', asyncHandler(async (req, res, next) => {
 	await dbUser.save()
 
 	if (options.sendMail) {
-		options.sendMail("Thank you for upgrading 🚀", `Hello,\n\nThis is a confirmation email that you have successfully upgraded your account to the ${plan.name} plan :)\n\nIf you have any question or suggestion, just send me an email (or reply to this one).\n\nGlad to have you on board!`, user.email)
+		options.sendMail("Thank you for upgrading 🚀", `Hello,\n\nThis is a confirmation email that you have successfully upgraded your account to the ${plan.name} plan :)\n\nIf you have any question or suggestion, just send me an email (or reply to this one).\n\nGlad to have you on board!`, dbUser.email)
 	}
 
 	res.send({})
