@@ -125,7 +125,7 @@
 <% if (options.upgradable) { %>
 <!-- Upgrade Modal -->
 <div class="modal fade" id="upgradeModal" tabindex="-1" role="dialog" aria-hidden="true">
-	<div class="modal-dialog modal-dialog-centered" role="document">
+	<div style="max-width: 800px;" class="modal-dialog modal-dialog-centered" role="document">
 		<div class="modal-content">
 
 			<div class="modal-header">
@@ -151,7 +151,7 @@
 									</div>
 									<div class="card-body pt-0">
 										<ul class="list-unstyled mb-4">
-											<% for (let gig of plan.advantages) { %>
+											<% for (let gig of (plan.advantages || plan.perks)) { %>
 												<li><%= gig %></li>
 											<% } %>
 										</ul>
@@ -184,7 +184,7 @@
 							<div class="col">
 								<button type="submit" class="float-right btn btn-primary">
 									<span style='display:none' class="spinner-border spinner-border-sm" role="status"></span>
-									<span>Continue 🚀</span>
+									<span>Continue</span>
 								</button>
 							</div>
 						</div>

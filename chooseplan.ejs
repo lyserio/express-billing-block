@@ -65,7 +65,7 @@
 											</div>
 											<div class="card-body pt-0">
 												<ul class="list-unstyled mb-4">
-													<% for (let gig of plan.advantages) { %>
+													<% for (let gig of (plan.advantages || plan.perks)) { %>
 														<li><%= gig %></li>
 													<% } %>
 												</ul>
@@ -143,8 +143,6 @@
 		function submitUpgrade(token) {
 			let plan = $('[name="plan"]').val()
 			let userPlan = '<%= user.plan %>'
-
-			console.log(plan, userPlan)
 
 			if (plan === userPlan) return location.href = '<%= redirect %>'
 
