@@ -236,12 +236,12 @@
 
 		<% if (options.upgradable && !sources.length) { %>
 
-			let elements1 = stripe.elements()
-			let card1 = elements1.create('card', options)
-			card1.mount('#upgradeForm .card-element')
-			card1.addEventListener('change', (event) => {
-				 $('#upgradeForm .card-errors').text(event.error ? event.error.message : '')
-			})
+		let elements1 = stripe.elements()
+		let card1 = elements1.create('card', options)
+		card1.mount('#upgradeForm .card-element')
+		card1.addEventListener('change', (event) => {
+			 $('#upgradeForm .card-errors').text(event.error ? event.error.message : '')
+		})
 
 		<% } %>
 
@@ -263,7 +263,8 @@
 					window.location = window.location.pathname
 				
 				}).fail(e => {
-					alert(e.message)
+					$('#upgradeForm button .spinner-border').hide()
+					$('#upgradeForm .card-errors').text(e.message)
 					console.error(e)
 				})
 			}
@@ -275,7 +276,12 @@
 				<% if (!sources.length) { %>
 				stripe.createToken(card1).then((result) => {
 
-					if (result.error) return $('#upgradeForm .card-errors').text(result.error.message)
+					if (result.error) {
+						$('#upgradeForm button .spinner-border').hide()
+						$('#upgradeForm .card-errors').text(result.error.message)
+
+						return 
+					}
 
 					let token = result.token.id
 					submitUpgrade(token)
@@ -297,11 +303,16 @@
 
 		$('#cardForm').submit(function(event) {
 			event.preventDefault()
+			
 			$('#cardForm button .spinner-border').show()
 
 			stripe.createToken(card2).then((result) => {
 
-				if (result.error) return $('#cardForm .card-errors').text(result.error.message)
+				if (result.error) {
+					$('#cardForm button .spinner-border').hide()
+					$('#cardForm .card-errors').text(result.error.message)
+					return 
+				}
 
 				let token = result.token.id
 			
@@ -314,7 +325,8 @@
 					billing.reload("#billingSection")
 				
 				}).fail(e => {
-					alert("We couldn't add your card. Please try again or with another card.")
+					$('#cardForm button .spinner-border').hide()
+					$('#cardForm .card-errors').text("We couldn't add your card. Please try again or with another card.")
 					console.error(e)
 				})
 
