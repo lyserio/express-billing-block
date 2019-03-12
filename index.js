@@ -51,8 +51,12 @@ const billing = async (customerId, user) => {
 		limit: 5 
 	})
 
+	// Add upcoming invoice
+	let upcomingInvoice = await stripe.invoices.retrieveUpcoming(customerId)
+	allInvoices.data.push(upcomingInvoice)
+
 	allInvoices = allInvoices.data
-	.filter(invoice => invoice.amount_due > 0)
+	.filter(invoice => invoice.amount_due > 0) // Only show 'real' invoices 
 	.map(invoice => {
 		invoice.amount = (invoice.amount_due / 100).toLocaleString('en-US', { 
 			style: 'currency', 

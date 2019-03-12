@@ -56,12 +56,25 @@
 	<ul class="list-group py-3">				
 		<% for (let invoice of invoices) { %>
 			<li class="list-group-item d-flex justify-content-between align-items-center">
-				<p class='m-0'>
-					Invoice for <b><%= invoice.amount %></b>
-					<span class="badge badge-<%= invoice.status === 'paid' ? 'success' : ( invoice.unpaid ? 'danger' : 'warning') %>"><%= invoice.unpaid ? 'payment failed, please update card' : invoice.status %></span>
-					<br>
-					<small><%= invoice.cleanPeriodStart %> → <%= invoice.cleanPeriodEnd %></small>
-				</p>
+				<% if (invoice.status === 'draft') { %>
+					<div class='m-0'>
+						Draft invoice for <b><%= invoice.amount %></b>
+						<span class="badge badge-secondary">upcoming</span>
+						<br>
+						<% for (let line of invoice.lines.data.filter(l => l.amount > 0)) { %>
+							<p><small><%= line.description %></small></p>
+						<% } %>
+						<br>
+						<p><small><%= invoice.cleanPeriodStart %> → <%= invoice.cleanPeriodEnd %></small></p>
+					</div>
+				<% } else { %>
+					<p class='m-0'>
+						Invoice for <b><%= invoice.amount %></b>
+						<span class="badge badge-<%= invoice.status === 'paid' ? 'success' : ( invoice.unpaid ? 'danger' : 'warning') %>"><%= invoice.unpaid ? 'payment failed, please update card' : invoice.status %></span>
+						<br>
+						<small><%= invoice.cleanPeriodStart %> → <%= invoice.cleanPeriodEnd %></small>
+					</p>
+				<% } %>
 
 				<% if (invoice.invoice_pdf) { %>
 					<a target='_blank' href='<%= invoice.invoice_pdf %>'>↓ Download</a>
