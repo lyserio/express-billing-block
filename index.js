@@ -52,8 +52,12 @@ const billing = async (customerId, user) => {
 	})
 
 	// Add upcoming invoice
-	let upcomingInvoice = await stripe.invoices.retrieveUpcoming(customerId)
-	allInvoices.data.push(upcomingInvoice)
+	try {
+		let upcomingInvoice = await stripe.invoices.retrieveUpcoming(customerId)
+		allInvoices.data.unshift(upcomingInvoice)
+	} catch(e) {
+		console.log('User has no usage yet.')
+	}
 
 	allInvoices = allInvoices.data
 	.filter(invoice => invoice.amount_due > 0) // Only show 'real' invoices 
