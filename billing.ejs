@@ -28,7 +28,7 @@
 <% if (sources.length) { %> 
 	<p><b>Payment method</b></p>
 	
-	<button type="button" class="btn btn-sm btn-primary" data-toggle="modal" data-target="#cardModal">Add a new card</button>
+	<button type="button" class="btn btn-sm btn-primary" data-toggle="modal" data-target="#cardModal">Replace card</button>
 
 	<ul class="list-group py-3">
 		<% for (let source of sources) { %>
@@ -116,10 +116,8 @@
 
 						<div class='card-element form-control'></div>
 						<div class='card-errors error' role="alert"></div>
-					
-						<br><br>
 						
-						<div class="d-flex justify-content-between align-items-center">
+						<div class="mt-4 d-flex justify-content-between align-items-center">
 							<p><small>Card secured with <a href='https://stripe.com'>Stripe</a>.</small></p>
 
 							<button type="submit" class="btn btn-primary">
@@ -333,10 +331,11 @@
 					stripeToken: token
 				}, (data) => {
 
-					$('#cardModal').modal('hide')
+					// https://stackoverflow.com/questions/11519660/twitter-bootstrap-modal-backdrop-doesnt-disappear
+					$('#cardModal').modal('hide').on('hidden.bs.modal', function() {
+						billing.reload("#billingSection")
+					})
 
-					billing.reload("#billingSection")
-				
 				}).fail(e => {
 					$('#cardForm button .spinner-border').hide()
 					$('#cardForm .card-errors').text("We couldn't add your card. Please try again or with another card.")

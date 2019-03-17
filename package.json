@@ -1,12 +1,12 @@
 {
   "name": "express-billing-page",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "A simple Stripe billing page middleware for Express",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "Vincent L",
+  "author": "Vincent Loewert",
   "license": "MIT",
   "dependencies": {
     "ejs": "^2.6.1",

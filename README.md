@@ -1,12 +1,12 @@
 # express-billing-page
 
-*Still in alpha testing*
+*Still in testing*
 
-A simple Express (4.0+) middleware for rendering billing pages to your users, directly connected to Stripe.
-
-Designed for use with Bootstrap 4.0 and jQuery.
+An Express (4.0+) middleware for rendering billing pages to your users, directly connected to Stripe.
+Designed for MongoDB, Bootstrap 4.0 and jQuery.
 
 The goal is to be a drop-in helper for handling and managing Stripe subscriptions.
+Useful for showing your users status of their subscriptions, their invoices, manager their cards, etc..
 
 ## Features
 
@@ -17,37 +17,45 @@ The goal is to be a drop-in helper for handling and managing Stripe subscription
 - [x] Upgrade popups
 - [ ] Webhook for handling non-payments
 - [ ] Webhook popups
-- [ ] Button to disable subscription
+- [ ] Button to self un-subscribe
 
 ### Notes
 
-- req.user must contain a valid user object, with either `user.stripeCustomerId` or `user.stripe.customerId` defined
-- doesn't support metered billing for now
+- `req.user` must contain a valid user object
+- In your Mongoose model, your users must have a `stripe` object:
+```
+stripe: {
+	subscriptionId: String,
+	customerId: String,
+	subscriptionItems: []
+}
+```
 
 ## Usage
 
 Install the library
 
 ```bash
-npm i express-billing-page
+npm install express-billing-page
 ```
 
 Server code:
 
 ```javascript
 app.use('/billing', require('express-billing-page')({
-	mongoUser: db.User,
+	mongoUser: db.User, // A direct access to your Mongoose database User
 	secretKey: "sk_live_xxxxxxxxxxxxxxxxxxxxxxx",
 	publicKey: "pk_live_xxxxxxxxxxxxxxxxxxxxxxx",
-	upgradable: true,
+	upgradable: true, // Will offer a popup to upgrade plans
 	sendMail: (subject, text, email) => {
 		// Send a mail with the library of your choice
+		// For upgrades, card changes, etc...
 	},
 	plans: [{
 		name: 'Hobby',
 		id: 'hobby',
 		order: 1,
-		stripeId: 'plan_xxxxxxxxxxxxx',
+		stripeId: 'plan_xxxxxxxxxxxxx', // Id of your plan on Stripe
 		price: 12,
 		advantages: ['200 daily active users', '1 year data retention', '3 apps', 'Priority support']
 	}, {
@@ -64,12 +72,10 @@ app.use('/billing', require('express-billing-page')({
 
 Simple client code example (**jQuery & bootstrap.js are required**):
 
+Will auto populate the div `#billingSection`.
+
 ```javascript
-<div id='billing'></div>
+<div id='billingSection'></div>
 
 <script src='/billing/billing.js'></script>
-
-<script>
-	billing.reload('#billing')
-</script>
 ```
