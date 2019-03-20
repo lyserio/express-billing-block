@@ -179,9 +179,7 @@ router.post('/upgrade', asyncHandler(async (req, res, next) => {
 
 	await dbUser.save()
 
-	if (options.sendMail) {
-		options.sendMail("Thank you for upgrading 🚀", `Hello,\n\nThis is a confirmation email that you have successfully upgraded your account to the ${plan.name} plan :)\n\nIf you have any question or suggestion, just send me an email (or reply to this one).\n\nGlad to have you on board!`, dbUser.email)
-	}
+	sendMail("Thank you for upgrading 🚀", `Hello,\n\nThis is a confirmation email that you have successfully upgraded your account to the ${plan.name} plan :)\n\nIf you have any question or suggestion, just send me an email (or reply to this one).\n\nGlad to have you on board!`, dbUser.email)
 
 	res.send({})
 
@@ -201,6 +199,50 @@ router.post('/card', asyncHandler(async (req, res, next) => {
 	res.send({})
 }))
 
+router.post('/webhook', asyncHandler(async (req, res, next) => {
+
+	// Make sure event is signed
+	let sig = request.headers["stripe-signature"]
+	let event = stripe.webhooks.constructEvent(req.body, sig, options.webhookSecret)
+
+	let type =event.type
+	console.log('Receive new event from stripe: '+type)
+	// console.log(req.body)
+
+	if (type === 'customer.subscription.trial_will_end') {
+		
+		// Send email for ending trial
+		// sendMail(`Your trial is ending - ${options.siteName}`, `Hello,\n\nThis is an email to let you know that your ${options.siteName} trial will be ending soon.\n\nIf you do not wish to continue, you can cancel your subscription now in your dashboard. Else, you don't have anything to do :)\n\nCheers`, dbUser.email)
+
+	} else if (type === 'customer.source.expiring') {
+
+		// Send email for credit card expiring
+		// Already handled by Stripe
+
+	} else if (type === 'invoice.payment_failed') {
+		
+		// Send email for failed invoice payment
+		// Already handled by Stripe
+	
+	} else if (type === 'customer.subscription.deleted') {
+
+		let customerId = event.data.object.customer
+		let subscriptionId = event.data.object.id
+
+		let user = await mongoUser.findOne({'stripe.customerId': customer}).exec()
+		
+		if (user.plan) user.plan = 'free'
+		user.stripe.subscriptionId = null
+		user.stripe.subscriptionItems = []
+		user.save()
+
+		sendMail(`Subscription canceled - ${options.siteName}`, `Hello,\n\nThis is an automatic confirmation email to inform you that your ${options.siteName} subscription was canceled.\n\nWe hope to see you back soon!`, user.email)
+
+	}
+
+	res.send({ received: true })
+}))
+
 router.get('/chooseplan', asyncHandler(async (req, res, next) => {
 
 	let customerId = res.locals.customerId
@@ -218,6 +260,8 @@ router.get('/billing.js', (req, res, next) => {
 
 module.exports = (opts) => {
 	if (opts) options = opts
+
+	sendMail = options.sendMail || function () {}
 
 	return router
 }
