@@ -5,18 +5,21 @@ const router 	= express.Router()
 const ejs 		= require("ejs")
 //const mailgun 	= require("mailgun.js")
 
+let stripe = null;
 let options = {}
 
 const asyncHandler = fn => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next)
 
 const billing = async (customerId, user) => {
 
-	let stripe = Stripe(options.secretKey)
+	
+	if (!stripe) stripe = Stripe(options.secretKey)
 
 	if (!customerId) {
 		return {
 			sources: [],
 			invoices: [],
+			upgradablePlans: options.plans,
 			subscriptions: [],
 			user: user,
 			options: options
@@ -51,12 +54,13 @@ const billing = async (customerId, user) => {
 		limit: 5 
 	})
 
-	// Add upcoming invoice
-	try {
-		let upcomingInvoice = await stripe.invoices.retrieveUpcoming(customerId)
-		allInvoices.data.unshift(upcomingInvoice)
-	} catch(e) {
-		console.log('User has no usage yet.')
+	if (options.showDraftInvoice) {
+		try {
+			let upcomingInvoice = await stripe.invoices.retrieveUpcoming(customerId)
+			allInvoices.data.unshift(upcomingInvoice)
+		} catch(e) {
+			// No upcoming invoices
+		}
 	}
 
 	allInvoices = allInvoices.data
@@ -77,8 +81,11 @@ const billing = async (customerId, user) => {
 		return invoice
 	})
 
+	let upgradablePlans = (options.plans || []).filter(p => user.plan !== p.id && p.id !== 'free')
+
 	return {
 		sources: sources,
+		upgradablePlans: upgradablePlans,
 		invoices: allInvoices,
 		subscriptions: subscriptions,
 		user: user,
@@ -205,7 +212,7 @@ router.post('/webhook', asyncHandler(async (req, res, next) => {
 	let sig = request.headers["stripe-signature"]
 	let event = stripe.webhooks.constructEvent(req.body, sig, options.webhookSecret)
 
-	let type =event.type
+	let type = event.type
 	console.log('Receive new event from stripe: '+type)
 	// console.log(req.body)
 
@@ -252,6 +259,41 @@ router.get('/chooseplan', asyncHandler(async (req, res, next) => {
 	data.redirect = options.choosePlanRedirect
 
 	res.render(__dirname+'/chooseplan', data)
+}))
+
+
+router.get('/cancelsubscription', asyncHandler(async (req, res, next) => {
+
+	let subscriptionId = res.locals.subscriptionId
+
+	let dbUser = await options.mongoUser.findById(req.user.id).exec()
+
+	await stripe.subscriptions.update(subscriptionId, {
+ 		cancel_at_period_end: true
+ 	})
+
+ 	dbUser.stripe.canceled = true
+
+	dbUser.save()
+
+	res.redirect('/account#billing')
+}))
+
+router.get('/resumesubscription', asyncHandler(async (req, res, next) => {
+
+	let subscriptionId = res.locals.subscriptionId
+
+	let dbUser = await options.mongoUser.findById(req.user.id).exec()
+
+	await stripe.subscriptions.update(subscriptionId, {
+ 		cancel_at_period_end: false
+ 	})
+
+	dbUser.stripe.canceled = false
+
+	dbUser.save()
+
+	res.redirect('/account#billing')
 }))
 
 router.get('/billing.js', (req, res, next) => {

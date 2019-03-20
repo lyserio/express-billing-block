@@ -6,9 +6,19 @@
 
 <% if (subscriptions.length) { %>
 
-	<% for (let subscription of subscriptions.filter(sub => sub.plan)) { %>
+	<% if (user.stripe.canceled) { %>
+		
+		<div class="alert alert-warning" role="alert">
+			Your subscription will be canceled at the end of the billing period on <b><%= subscriptions[0].currentPeriodEnd %></b>. <a href="/billing/resumesubscription">Click here</a> to resume it before it's too late.
+		</div>
 
-		<p>Your <b><%= options.plans.find(p => p.stripeId === subscription.plan.id) ? options.plans.find(p => p.stripeId === subscription.plan.id).name : '' %></b> plan is set to <b><%= subscription.plan.amount %> per <%= subscription.plan.interval_count !== 1 ? subscription.plan.interval_count : '' %> <%= subscription.plan.interval %></b> and will renew <b><%= subscription.currentPeriodEnd %></b>.</p>
+	<% } else { %>
+
+		<% for (let subscription of subscriptions.filter(sub => sub.plan)) { %>
+
+			<p>Your <b><%= options.plans.find(p => p.stripeId === subscription.plan.id) ? options.plans.find(p => p.stripeId === subscription.plan.id).name : '' %></b> plan is set to <b><%= subscription.plan.amount %> per <%= subscription.plan.interval_count !== 1 ? subscription.plan.interval_count : '' %> <%= subscription.plan.interval %></b> and will renew <b><%= subscription.currentPeriodEnd %></b>.</p>
+
+		<% } %>
 
 	<% } %>
 
@@ -17,6 +27,7 @@
 		<br>
 	<% } %>
 
+	
 <% } else if (options.upgradable) { %>
 	<button type="button" class="btn btn-outline-success" data-toggle="modal" data-target="#upgradeModal">Upgrade your plan 🚀</button>
 	<br>
@@ -28,7 +39,7 @@
 <% if (sources.length) { %> 
 	<p><b>Payment method</b></p>
 	
-	<button type="button" class="btn btn-sm btn-primary" data-toggle="modal" data-target="#cardModal">Replace card</button>
+	<button type="button" class="btn btn-sm btn-primary" data-toggle="modal" data-target="#cardModal">Update card</button>
 
 	<ul class="list-group py-3">
 		<% for (let source of sources) { %>
@@ -84,7 +95,48 @@
 	</ul>
 <% } %>
 
+<% if (subscriptions.length && !user.stripe.canceled) { %>
+
+<p class="mt-4"><small><a class='text-danger' href='javascript:' data-toggle="modal" data-target="#cancelModal">Cancel your subscription</a></small></p>
+
+<!-- Cancel Modal -->
+<div class="modal fade" id="cancelModal" tabindex="-2" role="dialog" aria-hidden="true">
+	<div class="modal-dialog modal-dialog-centered" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				
+				<h5 class="modal-title">Are you sure?</h5>
+				
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+					<span aria-hidden="true">&times;</span>
+				</button>
+
+			</div>
+
+			<div class="modal-body">
+				<div class="container-fluid">
+					<h5>We'd be very sad to see you go :(</h5>
+					<br>
+					<p>If you decide to continue, your subscription will be canceled at the end of your current billing period at which point all privileged features will be disabled.</p>
+					<br>
+				</div>
+			</div>
+
+			<div class="modal-footer">
+				<a class='mr-3' href='javascript:' data-dismiss="modal" aria-label="Close">Go back</a>
+				<a href="/billing/cancelsubscription" class="btn btn-warning">
+					<span style='display:none' class="spinner-border spinner-border-sm"></span>
+					<span>Cancel my subscription</span>
+				</a>
+			</div>
+		</div>
+	</div>
+</div>
+
+<% } %>
+
 <style>
+
 	.card-pricing.popular {
 		z-index: 1;
 		border: 3px solid #007bff;
@@ -133,15 +185,17 @@
 	</div>
 </div>
 
+
+
 <% if (options.upgradable) { %>
 <!-- Upgrade Modal -->
 <div class="modal fade" id="upgradeModal" tabindex="-1" role="dialog" aria-hidden="true">
-	<div style="max-width: 800px;" class="modal-dialog modal-dialog-centered" role="document">
+	<div style="max-width: <%= upgradablePlans.length * 400 %> px;" class="modal-dialog modal-dialog-centered" role="document">
 		<div class="modal-content">
 
 			<div class="modal-header">
 				
-				<h5 class="modal-title">Upgrade your account 🚀</h5>
+				<h5 class="modal-title">Upgrade your account</h5>
 				
 				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
 					<span aria-hidden="true">&times;</span>
@@ -154,11 +208,17 @@
 					<div class="container-fluid">
 						<div class="card-deck flex-column flex-md-row mb-3">
 
-							<% for (let plan of options.plans.filter(p => user.plan !== p.id && p.id !== 'free')) { %>
+							<% for (let plan of upgradablePlans) { %>
 								<div data-plan='<%= plan.id %>' class="card card-pricing text-center px-3 mb-4"> <!-- add 'popular shadow' classes to select -->
 									<span class="h6 w-60 mx-auto px-4 py-1 rounded-bottom bg-primary text-white shadow-sm"><%= plan.name %></span>
 									<div class="bg-transparent card-header pt-4 border-0">
 										<h1 class="h1 font-weight-normal text-primary text-center mb-0" data-pricing-value="<%= plan.price %>">$<span class="price"><%= plan.price %></span><span class="h6 text-muted ml-2">/ per month</span></h1>
+
+										<% if (plan.trial ) { // && !subscriptions.length %>
+											<br>
+											<p class="text-success"><%= plan.trial %> days free trial</p>
+										<% } %>
+										
 									</div>
 									<div class="card-body pt-0">
 										<ul class="list-unstyled mb-4">
@@ -167,17 +227,21 @@
 											<% } %>
 										</ul>
 
-										<button onclick='choosePlan("<%= plan.id %>")' type="button" class="btn btn-outline-primary mb-3">Choose</button>
+										<% if (upgradablePlans.length > 1) { %>
+											<button onclick='choosePlan("<%= plan.id %>")' type="button" class="btn btn-outline-primary mb-3">Choose</button>
+										<% } %>
+
 									</div>
+
 								</div>
 							<% } %>
+
 						</div>
 
 						<input type="hidden" name="upgradePlan" value="free">
-
 						
 						<div class="row">
-							<div class='col-8' id='cardStuff'>
+							<div class='col-sm-8' id='cardStuff'>
 								<% if (subscriptions.length) { %>
 									
 									<p><small>Your existing subscription will be adjusted to the new amount.</small></p>
@@ -257,7 +321,7 @@
 		<% } %>
 
 		<% if (options.upgradable) { %>
-			choosePlan('<%= options.plans.filter(p => user.plan !== p.id && p.id !== "free")[0].id %>')
+			choosePlan('<%= upgradablePlans[0].id %>')
 
 			function submitUpgrade(token) {
 
