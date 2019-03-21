@@ -1,6 +1,6 @@
 {
   "name": "express-billing-page",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "A Stripe billing page middleware for Express",
   "main": "index.js",
   "scripts": {
