@@ -5,13 +5,15 @@ const router 	= express.Router()
 const ejs 		= require("ejs")
 //const mailgun 	= require("mailgun.js")
 
-let stripe = null;
+let stripe = null
 let options = {}
 
 const asyncHandler = fn => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next)
 
 router.post('/webhook', asyncHandler(async (req, res, next) => {
 
+	if (!stripe) stripe = Stripe(options.secretKey)
+		
 	// Make sure event is signed
 	let sig = req.headers["stripe-signature"]
 	let event = stripe.webhooks.constructEvent(req.body, sig, options.webhookSecret)
@@ -56,7 +58,6 @@ router.post('/webhook', asyncHandler(async (req, res, next) => {
 }))
 
 const billing = async (customerId, user) => {
-
 	
 	if (!stripe) stripe = Stripe(options.secretKey)
 
@@ -222,6 +223,7 @@ router.post('/upgrade', asyncHandler(async (req, res, next) => {
 
 		var subscription = await stripe.subscriptions.create({
 								customer: customerId,
+								trial_from_plan: true,
 								items: [{ plan: plan.stripeId }]
 							})
 	}

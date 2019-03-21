@@ -206,10 +206,9 @@
 
 					if (result.error) {
 						$('#confirm .spinner-border').hide()
-
-						$('#errorAlert').show()
-						return $('#errorAlert').text(result.error.message)
 					} 
+
+						$('#card-errors').text(result.error ? result.error.message : '')
 
 					let token = result.token.id
 					submitUpgrade(token)
