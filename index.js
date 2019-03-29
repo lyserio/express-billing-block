@@ -15,7 +15,7 @@ router.post('/webhook', asyncHandler(async (req, res, next) => {
 	if (!stripe) stripe = Stripe(options.secretKey)
 		
 	// Make sure event is signed
-	let sig = req.headers["stripe-signature"]
+	let sig = req.header("stripe-signature")
 	let event = stripe.webhooks.constructEvent(req.body, sig, options.webhookSecret)
 
 	let type = event.type
@@ -52,6 +52,8 @@ router.post('/webhook', asyncHandler(async (req, res, next) => {
 
 		sendMail(`Subscription canceled - ${options.siteName}`, `Hello,\n\nThis is an automatic confirmation email to inform you that your ${options.siteName} subscription was canceled.\n\nWe hope to see you back soon!`, user.email)
 
+	} else {
+		console.log("Won't act on webhook.")
 	}
 
 	res.send({ received: true })
