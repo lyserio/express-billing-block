@@ -17,6 +17,7 @@ router.post('/webhook', asyncHandler(async (req, res, next) => {
 	// Make sure event is signed
 	// let sig = req.header("stripe-signature")
 
+	// Will fail if event doesn't exist
 	let event = await stripe.events.retrieve(req.body.id)
 
 	let type = event.type
