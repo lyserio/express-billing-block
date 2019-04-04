@@ -13,14 +13,13 @@ const asyncHandler = fn => (req, res, next) => Promise.resolve(fn(req, res, next
 router.post('/webhook', asyncHandler(async (req, res, next) => {
 
 	if (!stripe) stripe = Stripe(options.secretKey)
-		
+
 	// Make sure event is signed
-	let sig = req.header("stripe-signature")
-	let event = stripe.webhooks.constructEvent(req.body, sig, options.webhookSecret)
+	// let sig = req.header("stripe-signature")
+
+	let event = await stripe.events.retrieve(req.body.id)
 
 	let type = event.type
-	console.log('Receive new event from stripe: '+type)
-	// console.log(req.body)
 
 	if (type === 'customer.subscription.trial_will_end') {
 		
