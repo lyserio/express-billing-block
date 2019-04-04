@@ -95,7 +95,7 @@
 	</ul>
 <% } %>
 
-<% if (subscriptions.length && !user.stripe.canceled) { %>
+<% if (options.allowCancel && subscriptions.length && !user.stripe.canceled) { %>
 
 <p class="mt-4"><small><a class='text-danger' href='javascript:' data-toggle="modal" data-target="#cancelModal">Cancel your subscription</a></small></p>
 
