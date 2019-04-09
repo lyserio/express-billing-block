@@ -15,9 +15,8 @@ Useful for showing your users status of their subscriptions, their invoices, man
 - [x] List active subscription plans
 - [x] List active cards, update current one
 - [x] Upgrade popups
-- [ ] Webhook for handling non-payments
-- [ ] Webhook popups
-- [ ] Button to self un-subscribe
+- [x] Webhook for handling non-payments
+- [x] Button to self un-subscribe
 
 ### Notes
 
