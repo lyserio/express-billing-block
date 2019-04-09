@@ -395,6 +395,8 @@
 					stripeToken: token
 				}, (data) => {
 
+					$( document ).trigger( "billing:cardadded" )
+
 					// https://stackoverflow.com/questions/11519660/twitter-bootstrap-modal-backdrop-doesnt-disappear
 					$('#cardModal').modal('hide').on('hidden.bs.modal', function() {
 						billing.reload("#billingSection")
