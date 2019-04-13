@@ -21,6 +21,7 @@ router.post('/webhook', asyncHandler(async (req, res, next) => {
 	let event = await stripe.events.retrieve(req.body.id)
 
 	let type = event.type
+	console.log('Stripe said: '+type)
 
 	if (type === 'customer.subscription.trial_will_end') {
 		
@@ -42,7 +43,7 @@ router.post('/webhook', asyncHandler(async (req, res, next) => {
 		let customerId = event.data.object.customer
 		let subscriptionId = event.data.object.id
 
-		let user = await mongoUser.findOne({'stripe.customerId': customerId}).exec()
+		let user = await options.mongoUser.findOne({'stripe.customerId': customerId}).exec()
 		
 		if (user.plan) user.plan = 'free'
 		user.stripe.subscriptionId = null
@@ -50,10 +51,14 @@ router.post('/webhook', asyncHandler(async (req, res, next) => {
 		user.stripe.canceled = false
 		user.save()
 
-		sendMail(`Subscription canceled - ${options.siteName}`, `Hello,\n\nThis is an automatic confirmation email to inform you that your ${options.siteName} subscription was canceled.\n\nWe hope to see you back soon!`, user.email)
+		sendMail(`Subscription canceled - ${options.siteName}`, 
+`Hello,\n
+This is an automatic email to inform that your ${options.siteName} subscription was canceled.
+${options.cancelMailExtra ? options.cancelMailExtra + '\n' : ''}
+We hope to see you back soon!`, user.email)
 
 	} else {
-		console.log("Won't act on webhook.")
+		// Won't act on it
 	}
 
 	res.send({ received: true })
@@ -235,7 +240,11 @@ router.post('/upgrade', asyncHandler(async (req, res, next) => {
 
 	await dbUser.save()
 
-	sendMail("Thank you for upgrading 🚀", `Hello,\n\nThis is a confirmation email that you have successfully upgraded your account to the ${plan.name} plan :)\n\nIf you have any question or suggestion, just send me an email (or reply to this one).\n\nGlad to have you on board!`, dbUser.email)
+	sendMail("Thank you for upgrading 🚀", 
+`Hello,\n
+This is a confirmation email that you have successfully upgraded your account to the ${plan.name} plan :)\n
+If you have any question or suggestion, just send me an email (or reply to this one).\n
+Glad to have you on board!`, dbUser.email)
 
 	res.send({})
 
