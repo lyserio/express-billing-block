@@ -129,7 +129,7 @@ const billing = async (customerId, user) => {
 		invoice.cleanPeriodStart = moment(invoice.lines.data[0].period.start * 1000).format('ll')
 
 		invoice.date = moment(invoice.date * 1000).format('ll')
-		invoice.unpaid = (invoice.attempt_count > 1)
+		invoice.unpaid = (invoice.attempt_count > 1 && !invoice.paid)
 
 		return invoice
 	})
