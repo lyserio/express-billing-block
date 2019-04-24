@@ -1,7 +1,7 @@
 <head>
-	<title>Choose a plan</title>
+	<title>Choose a <%= options.siteName %> Plan</title>
 	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-	<meta name="description" content="Choose a plan.">
+	<meta name="description" content="Choose a plan for <%= options.siteName %> and upgrade your account.">
 	<link rel="icon" type="image/png" href="/favicon.png" />
 	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
 	<link rel="stylesheet" type="text/css" href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css">
@@ -39,7 +39,7 @@
 	}
 
 	.card-pricing .list-unstyled li {
-		padding: .5rem 0;
+		padding: .4rem 0;
 		color: #6c757d;
 	}
 </style>
@@ -48,7 +48,7 @@
 	<div class="d-flex justify-content-center align-items-center">
 		<div class="card card-large m-4">
 			<div class="card-body px-5">
-				<h5 class="card-title text-center">Select a plan</h5>
+				<h5 class="card-title text-center">Select a <%= options.siteName %> plan</h5>
 				
 				<div id='errorAlert' style='display: none' class="alert alert-danger" role="alert"></div>
 
@@ -58,7 +58,7 @@
 							<span class="h6 w-60 mx-auto px-4 py-1 rounded-bottom bg-primary text-white shadow-sm"><%= plan.name %></span>
 							
 							<div class="bg-transparent card-header pt-4 border-0">
-								<h1 class="h1 font-weight-normal text-primary text-center mb-0" data-pricing-value="<%= plan.price %>">$<span class="price"><%= plan.price %></span><span class="h6 text-muted ml-2">/ per month</span></h1>
+								<h1 class="h2 font-weight-normal text-primary text-center mb-0" data-pricing-value="<%= plan.price %>">$<span class="price"><%= plan.price %></span><span class="h6 text-muted ml-2">/ per month</span></h1>
 
 								<% if (plan.trial && !subscriptions.length) { %>
 									<p class="text-success"><%= plan.trial %> days free trial</p>
@@ -67,9 +67,9 @@
 							</div>
 							
 							<div class="card-body py-0 px-3">
-								<ul class="list-unstyled mb-4">
-									<% for (let gig of (plan.advantages || plan.perks)) { %>
-										<li><%= gig %></li>
+								<ul class="list-unstyled mb-3">
+									<% for (let gig of (plan.advantages || plan.perks).filter(g => !g.minor)) { %>
+										<li><%= gig.title %></li>
 									<% } %>
 								</ul>
 
@@ -87,7 +87,7 @@
 				<p id='trialWarning'><small>Billing will start at the end of the trial period if you haven't canceled.</small></p>
 
 				<div class="row">
-					<div class='col-md-8' id='cardStuff'>
+					<div class='col-sm-8 mb-3' id='cardStuff'>
 						<% if (subscriptions.length) { %>
 						
 							<p><small>Your existing subscription will be adjusted to the new amount.</small></p>
@@ -97,20 +97,33 @@
 						<% if (!sources.length) { %>
 							<div id='card-element' class='form-control'></div>
 							<div id='card-errors' class='text-danger' role="alert"></div>
-							<br>
-							<p><small>Card secured by <a target='_blank' href='https://stripe.com'>Stripe</a>.</small></p>
+						
 						<% } %>
+
 					</div>
 
-					<div class="col">
-						<button id='confirm' type="submit" class="float-right btn btn-primary">
+
+					<div class="col-sm-4">
+						<button id='confirm' type="submit" class="mb-3 w-100 btn btn-primary">
 							<span style='display:none' class="spinner-border spinner-border-sm" role="status"></span>
-							<span>Continue → </span>
+							<span>Continue →</span>
 						</button>
 					</div>
+
 				</div>
 
+				<div class="row" style='display: none' id='couponInput'>
+					<div  class="mb-3 col-sm-4">
+						<input name='coupon' class='form-control form-control-sm' type="text" placeholder="Enter your coupon">
+					</div>
+					<div class="mb-3 col-sm" id='couponDescription'></div>
+				</div>
+				
+				<p><small>
+					<% if (!sources.length) { %> Card secured by Stripe. <% } %>
 
+					<a href='javascript:' onclick='$("#couponInput").show();$(this).remove()'>Have a coupon?</a>
+				</small></p>
 			</div>
 		</div>
 	</div>
@@ -142,7 +155,6 @@
 			let card1 = elements1.create('card', options)
 			card1.mount('#card-element')
 			card1.addEventListener('change', (event) => {
-
 				$('#card-errors').text(event.error ? event.error.message : '')
 			})
 
@@ -150,12 +162,14 @@
 		
 		function submitUpgrade(token) {
 			let plan = $('[name="plan"]').val()
+			let coupon = $('[name="coupon"]').val()
 			let userPlan = '<%= user.plan %>'
 
 			if (plan === userPlan) return location.href = '<%= redirect %>'
 
 			$.post('/billing/upgrade', {
 				stripeToken: token,
+				coupon: coupon,
 				upgradePlan: plan
 			}, function(data) {
 
@@ -208,7 +222,7 @@
 						$('#confirm .spinner-border').hide()
 					} 
 
-						$('#card-errors').text(result.error ? result.error.message : '')
+					$('#card-errors').text(result.error ? result.error.message : '')
 
 					let token = result.token.id
 					submitUpgrade(token)
@@ -220,6 +234,31 @@
 		})
 
 		choosePlan('<%= upgradablePlans[0].id %>')
+
+
+		//setup before functions
+		var typingTimer;                //timer identifier
+		var doneTypingInterval = 1000  //time in ms (5 seconds)
+
+		//on keyup, start the countdown
+		$('[name="coupon"]').keyup(function(){
+			clearTimeout(typingTimer);
+			if ($('[name="coupon"]').val()) {
+				typingTimer = setTimeout(doneTyping, doneTypingInterval);
+			}
+		})
+
+		//user is "finished typing," do something
+		function doneTyping () {
+			let code = $('[name="coupon"]').val()
+			$.get('/billing/testcoupon?code='+code, function(data) {
+				if (data.valid) {
+					$('#couponDescription').html("<span class='text-success'>Applied: "+data.description+"</span>")
+				} else {
+					$('#couponDescription').html("<span class='text-danger'>Invalid coupon.</span>")
+				}
+			})
+		}
 
 	</script>
 

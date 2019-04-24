@@ -99,6 +99,12 @@ const billing = async (customerId, user) => {
 			})
 		}
 
+		if (sub.discount && sub.discount.coupon) {
+			let coupon = sub.discount.coupon
+
+			sub.discountDescription = `${coupon.name}: -${coupon.percent_off ? coupon.percent_off + '%' : coupon.amount_off + ' ' + coupon.currency} for ${coupon.duration_in_months} months`
+		}
+
 		return sub
 	})
 
@@ -163,6 +169,22 @@ router.get('/', asyncHandler(async (req, res, next) => {
 	res.render(__dirname+'/billing.ejs', data)
 }))
 
+router.get('/testcoupon', (req, res, next) => {
+
+	let coupons = options.coupons
+	let couponToTest = req.query.code
+
+	let exist = coupons.find(c => c.code === couponToTest)
+
+	if (!exist) return res.send({ valid: false })
+
+	res.send({
+		valid: true,
+		description: exist.description
+	})
+})
+
+
 const addCardToCustomer = async (user, customerId, token) => {
 	
 	let stripe = Stripe(options.secretKey)
@@ -211,6 +233,13 @@ router.post('/upgrade', asyncHandler(async (req, res, next) => {
 	let plan = options.plans.find(plan => plan.id === planId)
 	if (!plan) return next('Invalid plan.')
 
+	// If we supplied a coupon
+	let couponCode = req.body.coupon
+	let coupon = null
+	if (options.coupons.find(c => c.code === couponCode)) {
+		coupon = couponCode
+	}
+
 	let stripe = Stripe(options.secretKey)
 
 	let subscriptionId = res.locals.subscriptionId
@@ -220,15 +249,17 @@ router.post('/upgrade', asyncHandler(async (req, res, next) => {
 		var subscription = await stripe.subscriptions.retrieve(subscriptionId)
 
 		await stripe.subscriptions.update(subscriptionId, {
+			coupon: coupon || undefined,
 			items: [{
 				id: subscription.items.data[0].id,
-				plan: plan.stripeId
+				plan: plan.stripeId,
 			}]
 		})
 
 	} else {
 
 		var subscription = await stripe.subscriptions.create({
+								coupon: coupon || undefined,
 								customer: customerId,
 								trial_from_plan: true,
 								items: [{ plan: plan.stripeId }]
@@ -278,9 +309,9 @@ router.get('/chooseplan', asyncHandler(async (req, res, next) => {
 
 router.get('/cancelsubscription', asyncHandler(async (req, res, next) => {
 
-	let subscriptionId = res.locals.subscriptionId
-
 	let dbUser = await options.mongoUser.findById(req.user.id).exec()
+
+	let subscriptionId = res.locals.subscriptionId
 
 	await stripe.subscriptions.update(subscriptionId, {
  		cancel_at_period_end: true

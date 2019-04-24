@@ -14,9 +14,11 @@
 
 	<% } else { %>
 
-		<% for (let subscription of subscriptions.filter(sub => sub.plan)) { %>
+		<% for (let sub of subscriptions.filter(sub => sub.plan)) { %>
 
-			<p>Your <b><%= options.plans.find(p => p.stripeId === subscription.plan.id) ? options.plans.find(p => p.stripeId === subscription.plan.id).name : '' %></b> plan is set to <b><%= subscription.plan.amount %> per <%= subscription.plan.interval_count !== 1 ? subscription.plan.interval_count : '' %> <%= subscription.plan.interval %></b> and will renew <b><%= subscription.currentPeriodEnd %></b>.</p>
+			<p>Your <b><%= options.plans.find(p => p.stripeId === sub.plan.id) ? options.plans.find(p => p.stripeId === sub.plan.id).name : '' %></b> plan is set to <b><%= sub.plan.amount %> per <%= sub.plan.interval_count !== 1 ? sub.plan.interval_count : '' %> <%= sub.plan.interval %></b> and will <%= sub.status === 'trialing' ? 'start' : 'renew' %> <b><%= sub.currentPeriodEnd %></b>.</p>
+
+			<p><small><%= sub.discountDescription ? 'Applied coupon ' + sub.discountDescription : '' %></small></p>
 
 		<% } %>
 
@@ -41,7 +43,7 @@
 	
 	<button type="button" class="btn btn-sm btn-primary" data-toggle="modal" data-target="#cardModal">Update card</button>
 
-	<ul class="list-group py-3">
+	<ul class="list-group py-3 mb-1">
 		<% for (let source of sources) { %>
 			<li class="list-group-item d-flex justify-content-between align-items-center">
 
@@ -53,13 +55,9 @@
 		<% } %>
 	</ul>
 
-	<br>
-
 <% } else { %>
 	<p>No cards on record. <a href='javascript:' data-toggle="modal" data-target="#cardModal">Click to add a card</a>.</p>
 <% } %>
-
-
 
 <% if (invoices.length) { %> 
 	<p><b>Billing history</b></p>
@@ -97,7 +95,7 @@
 
 <% if (options.allowCancel && subscriptions.length && !user.stripe.canceled) { %>
 
-<p class="mt-4"><small><a class='text-danger' href='javascript:' data-toggle="modal" data-target="#cancelModal">Cancel your subscription</a></small></p>
+<p class="mt-3"><small><a class='text-danger' href='javascript:' data-toggle="modal" data-target="#cancelModal">Cancel your subscription</a></small></p>
 
 <!-- Cancel Modal -->
 <div class="modal fade" id="cancelModal" tabindex="-2" role="dialog" aria-hidden="true">
@@ -222,8 +220,8 @@
 									</div>
 									<div class="card-body pt-0">
 										<ul class="list-unstyled mb-4">
-											<% for (let gig of (plan.advantages || plan.perks)) { %>
-												<li><%= gig %></li>
+											<% for (let gig of (plan.advantages || plan.perks).filter(p => !p.minor)) { %>
+												<li><%= gig.title %></li>
 											<% } %>
 										</ul>
 
