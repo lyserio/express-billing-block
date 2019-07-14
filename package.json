@@ -1,6 +1,6 @@
 {
   "name": "express-billing-page",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "A Stripe billing page middleware for Express.",
   "main": "index.js",
   "scripts": {
@@ -9,9 +9,9 @@
   "author": "Vincent Loewert",
   "license": "MIT",
   "dependencies": {
-    "ejs": "^2.6.1",
-    "express": "^4.16.4",
+    "ejs": "^2.6.2",
+    "express": "^4.17.1",
     "moment": "^2.24.0",
-    "stripe": "^6.28.0"
+    "stripe": "^6.36.0"
   }
 }

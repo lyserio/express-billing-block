@@ -3,8 +3,6 @@ const Stripe 	= require("stripe")
 const express 	= require("express")
 const router 	= express.Router()
 const ejs 		= require("ejs")
-//const mailgun 	= require("mailgun.js")
-
 let stripe = null
 let options = {}
 
@@ -50,6 +48,9 @@ router.post('/webhook', asyncHandler(async (req, res, next) => {
 		user.stripe.subscriptionItems = []
 		user.stripe.canceled = false
 		user.save()
+
+		if (options.onCancel && typeof options.onCancel === 'function') options.onCancel(user)
+
 
 		sendMail(`Subscription canceled - ${options.siteName}`, 
 `Hello,\n
@@ -174,7 +175,7 @@ router.get('/testcoupon', (req, res, next) => {
 	let coupons = options.coupons
 	let couponToTest = req.query.code
 
-	let exist = coupons.find(c => c.code === couponToTest)
+	let exist = coupons && coupons.find(c => c.code === couponToTest)
 
 	if (!exist) return res.send({ valid: false })
 
@@ -236,7 +237,7 @@ router.post('/upgrade', asyncHandler(async (req, res, next) => {
 	// If we supplied a coupon
 	let couponCode = req.body.coupon
 	let coupon = null
-	if (options.coupons.find(c => c.code === couponCode)) {
+	if (options.coupons && options.coupons.find(c => c.code === couponCode)) {
 		coupon = couponCode
 	}
 
@@ -271,11 +272,13 @@ router.post('/upgrade', asyncHandler(async (req, res, next) => {
 
 	await dbUser.save()
 
-	sendMail("Thank you for upgrading 🚀", 
+	if (options.onUpgrade && typeof options.onUpgrade === 'function') options.onUpgrade(user, plan.id)
+
+	sendMail("Thank you for upgrading", 
 `Hello,\n
-This is a confirmation email that you have successfully upgraded your account to the ${plan.name} plan :)\n
-If you have any question or suggestion, just send me an email (or reply to this one).\n
-Glad to have you on board!`, dbUser.email)
+This is a confirmation email that you have successfully upgraded your account to the ${plan.name} plan.\n
+If you have any question or suggestion, simply reply to this email.\n
+Glad to have you on board :)`, dbUser.email)
 
 	res.send({})
 
