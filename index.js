@@ -227,7 +227,7 @@ router.post('/upgrade', asyncHandler(async (req, res, next) => {
 		customerId = customer.id
 	}
 
-	let dbUser = await options.mongoUser.findById(req.user.id).exec()
+	let user = await options.mongoUser.findById(req.user.id).exec()
 
 	let planId = req.body.upgradePlan
 
@@ -267,10 +267,10 @@ router.post('/upgrade', asyncHandler(async (req, res, next) => {
 							})
 	}
 
-	dbUser.plan = plan.id
-	dbUser.stripe.subscriptionId = subscription.id
+	user.plan = plan.id
+	user.stripe.subscriptionId = subscription.id
 
-	await dbUser.save()
+	await user.save()
 
 	if (options.onUpgrade && typeof options.onUpgrade === 'function') options.onUpgrade(user, plan.id)
 
@@ -278,7 +278,7 @@ router.post('/upgrade', asyncHandler(async (req, res, next) => {
 `Hello,\n
 This is a confirmation email that you have successfully upgraded your account to the ${plan.name} plan.\n
 If you have any question or suggestion, simply reply to this email.\n
-Glad to have you on board :)`, dbUser.email)
+Glad to have you on board :)`, user.email)
 
 	res.send({})
 
@@ -312,7 +312,7 @@ router.get('/chooseplan', asyncHandler(async (req, res, next) => {
 
 router.get('/cancelsubscription', asyncHandler(async (req, res, next) => {
 
-	let dbUser = await options.mongoUser.findById(req.user.id).exec()
+	let user = await options.mongoUser.findById(req.user.id).exec()
 
 	let subscriptionId = res.locals.subscriptionId
 
@@ -320,9 +320,8 @@ router.get('/cancelsubscription', asyncHandler(async (req, res, next) => {
  		cancel_at_period_end: true
  	})
 
- 	dbUser.stripe.canceled = true
-
-	dbUser.save()
+ 	user.stripe.canceled = true
+	user.save()
 
 	res.redirect('/account#billing')
 }))
@@ -331,15 +330,14 @@ router.get('/resumesubscription', asyncHandler(async (req, res, next) => {
 
 	let subscriptionId = res.locals.subscriptionId
 
-	let dbUser = await options.mongoUser.findById(req.user.id).exec()
+	let user = await options.mongoUser.findById(req.user.id).exec()
 
 	await stripe.subscriptions.update(subscriptionId, {
  		cancel_at_period_end: false
  	})
 
-	dbUser.stripe.canceled = false
-
-	dbUser.save()
+	user.stripe.canceled = false
+	user.save()
 
 	res.redirect('/account#billing')
 }))

@@ -318,7 +318,7 @@
 
 		<% } %>
 
-		<% if (options.upgradable) { %>
+		<% if (options.upgradable && upgradablePlans.length) { %>
 			choosePlan('<%= upgradablePlans[0].id %>')
 
 			function submitUpgrade(token) {
