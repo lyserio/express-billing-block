@@ -36,6 +36,11 @@ router.post('/webhook', asyncHandler(async (req, res, next) => {
 		// Send email for failed invoice payment
 		// Already handled by Stripe
 	
+	} else if (type === 'customer.subscription.updated') {
+		
+		// Check status
+
+	
 	} else if (type === 'customer.subscription.deleted') {
 
 		let customerId = event.data.object.customer
@@ -82,7 +87,9 @@ const billing = async (customerId, user) => {
 
 	let stripeCustomer = await stripe.customers.retrieve(customerId)
 
-	let sources = stripeCustomer.sources.data
+	const paymentMethods = await stripe.paymentMethods.list({ customer: customerId, type: 'card' })
+
+	let sources = paymentMethods.data
 	let subscriptions = stripeCustomer.subscriptions.data
 
 	let defaultCard = sources.find(s => s.id = stripeCustomer.default_source)
@@ -186,17 +193,18 @@ router.get('/testcoupon', (req, res, next) => {
 })
 
 
-const addCardToCustomer = async (user, customerId, token) => {
+const addCardToCustomer = async (user, customerId, paymentMethodId) => {
 	
 	let stripe = Stripe(options.secretKey)
 	let customer = null
 
 	if (customerId) {
 
-		customer = await stripe.customers.update(customerId, { source: token })
-	
+		await stripe.paymentMethods.attach(paymentMethodId, { customer: customerId })
+
 	} else {
-		customer = await stripe.customers.create({ email: user.email, source: token })
+
+		customer = await stripe.customers.create({ email: user.email, payment_method: paymentMethodId })
 
 		let dbUser = await options.mongoUser.findById(user.id).exec()
 		
@@ -208,18 +216,29 @@ const addCardToCustomer = async (user, customerId, token) => {
 	return customer
 }
 
+router.get('/setupintent', asyncHandler(async (req, res, next) => {
+
+	let customerId = res.locals.customerId
+
+	// Triggers authentication if needed
+	const setupIntent = await stripe.setupIntents.create({ usage: 'off_session' })
+
+
+	res.send({ clientSecret: setupIntent.client_secret })
+}))
+
 
 router.post('/upgrade', asyncHandler(async (req, res, next) => {
 
-	let token = req.body.stripeToken
+	let token = req.body.token
 	let customerId = res.locals.customerId
 
 	if (!customerId && !token) return next("Sorry! We need a credit card to subscribe you.")
 
 	// If the customer doesn't have card or isn't a Stripe customer
-	if (token) { 
+	if (paymentMethodId) { 
 		try {
-			var customer = await addCardToCustomer(req.user, customerId, token)
+			var customer = await addCardToCustomer(req.user, customerId, paymentMethodId)
 		} catch(e) {
 			return next("Sorry, we couldn't process your credit card. Please check with your bank.")
 		}
@@ -254,7 +273,8 @@ router.post('/upgrade', asyncHandler(async (req, res, next) => {
 			items: [{
 				id: subscription.items.data[0].id,
 				plan: plan.stripeId,
-			}]
+			}],
+			expand: ['latest_invoice.payment_intent'],
 		})
 
 	} else {
@@ -263,10 +283,49 @@ router.post('/upgrade', asyncHandler(async (req, res, next) => {
 								coupon: coupon || undefined,
 								customer: customerId,
 								trial_from_plan: true,
-								items: [{ plan: plan.stripeId }]
+								payment_behavior: 'allow_incomplete',
+								items: [{ plan: plan.stripeId }],
+								expand: ['latest_invoice.payment_intent'],
 							})
 	}
 
+
+	if (subscription.status === 'incomplete') {
+		// Requires SCA auth
+
+		// Depending if on-session or off-session, either waiting for card confirmation or payment confirmation
+		if (subscription.pending_setup_intent) {
+
+			var intent = subscription.pending_setup_intent
+			var action = 'handleCardSetup'
+		
+		} else if (subscription.latest_invoice.payment_intent) {
+		
+			var intent = latest_invoice.payment_intent
+			var action = 'handleCardPayment'
+		
+		} else {
+		
+			return next("We couldn't complete the transaction.")
+		
+		}
+
+		if (paymentIntent.status === 'requires_action') {
+			
+			let secret = paymentIntent.client_secret
+			res.send({ actionRequired: action, secret: intent.secret })
+		
+		} else if (intent.status === 'requires_payment_method') {
+			
+			return next('Please try with another card.')
+
+		}
+
+	}
+
+	res.send({  })
+
+	// Following needs to be put in webhook
 	user.plan = plan.id
 	user.stripe.subscriptionId = subscription.id
 
@@ -280,17 +339,18 @@ This is a confirmation email that you have successfully upgraded your account to
 If you have any question or suggestion, simply reply to this email.\n
 Glad to have you on board :)`, user.email)
 
-	res.send({})
+	
 
 }))
 
+
 router.post('/card', asyncHandler(async (req, res, next) => {
 
-	let token = req.body.stripeToken
+	let paymentMethodId = req.body.paymentMethodId
 	let customerId = res.locals.customerId
 
 	try {
-		await addCardToCustomer(req.user, customerId, token)
+		await addCardToCustomer(req.user, customerId, paymentMethodId)
 	} catch(e) {
 		return next(e)
 	}

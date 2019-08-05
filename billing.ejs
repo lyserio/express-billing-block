@@ -41,15 +41,22 @@
 <% if (sources.length) { %> 
 	<p><b>Payment method</b></p>
 	
-	<button type="button" class="btn btn-sm btn-primary" data-toggle="modal" data-target="#cardModal">Update card</button>
+	<button type="button" class="btn btn-sm btn-primary" data-toggle="modal" data-target="#cardModal">Add a new card</button>
 
 	<ul class="list-group py-3 mb-1">
 		<% for (let source of sources) { %>
 			<li class="list-group-item d-flex justify-content-between align-items-center">
 
-				<span><%= source.brand %> <b>···· ···· ····</b> <%= source.last4 %> <span class="badge badge-warning">exp <%= source.exp_year %></span></span>
+				<span><img class='mr-2' src='https://rawcdn.githack.com/FreshVine/Payment-Methods-SVG/c441556f81b9a9950ab03d0d96b27fb1493ce22a/icons/cards/<%= source.card.brand %>.svg' width=30/>  <b>···· ···· ····</b> <%= source.card.last4 %> <span class="badge badge-warning">exp <%= source.card.exp_year %></span></span>
 				
-				<% if (source.isDefault) { %><span class="badge badge-primary">default</span> <% } %>
+				<% if (source.isDefault) { %>
+					<span class="badge badge-primary">selected</span>
+				<% } else { %>
+					<div>
+						<a href='#' class="btn-primary btn btn-sm small">select</a>
+						<a href='#' class="btn-danger btn btn-sm small">remove</a>
+					</div>
+				<% } %>
 
 			</li>
 		<% } %>
@@ -162,13 +169,13 @@
 				<div class="modal-body">
 					<div class="container-fluid">
 
-						<p><small>Credit cards and debit cards are supported.</small></p>
+						<p><small>Credit and debit cards are supported.</small></p>
 
-						<div class='card-element form-control'></div>
-						<div class='card-errors error' role="alert"></div>
+						<div class='card-element mb-2 form-control'></div>
+						<div class='card-errors text-danger' role="alert"></div>
 						
-						<div class="mt-4 d-flex justify-content-between align-items-center">
-							<p><small>Card secured with <a href='https://stripe.com'>Stripe</a>.</small></p>
+						<div class="mt-4 d-flex justify-content-between align-items-end">
+							<small>Card stored securely with <a href='https://stripe.com'>Stripe</a></small>
 
 							<button type="submit" class="btn btn-primary">
 								<span style='display:none' class="spinner-border spinner-border-sm"></span>
@@ -250,7 +257,7 @@
 									<div class='card-element form-control'></div>
 									<div class='card-errors error text-danger' role="alert"></div>
 									<br>
-									<p><small>Your card is secured by Stripe.</small></p>
+									<small>Card stored securely with Stripe.</small>
 								<% } %>
 							</div>
 
@@ -309,31 +316,48 @@
 
 		<% if (options.upgradable && !sources.length) { %>
 
-		let elements1 = stripe.elements()
-		let card1 = elements1.create('card', options)
-		card1.mount('#upgradeForm .card-element')
-		card1.addEventListener('change', (event) => {
-			 $('#upgradeForm .card-errors').text(event.error ? event.error.message : '')
-		})
+			let elements1 = stripe.elements()
+			let card1 = elements1.create('card', options)
+			card1.mount('#upgradeForm .card-element')
+			card1.addEventListener('change', (event) => {
+				 $('#upgradeForm .card-errors').text(event.error ? event.error.message : '')
+			})
 
 		<% } %>
 
 		<% if (options.upgradable && upgradablePlans.length) { %>
 			choosePlan('<%= upgradablePlans[0].id %>')
 
-			function submitUpgrade(token) {
+			function submitUpgrade(plan, token) {
 
 				$.post('/billing/upgrade', {
-					stripeToken: token,
-					upgradePlan: $('[name="upgradePlan"]').val()
+					token: token,
+					upgradePlan: plan
 				}, function(data) {
 
-					$('#upgradeModal').modal('hide')
+					if (data.actionRequired) {
+						
+						stripe[data.actionRequired](data.secret).then(function(result) {
 
-					alert("Account successfully upgraded!")
+							if (result.error) {
+								$('#upgradeForm button .spinner-border').hide()
+								$('#upgradeForm .card-errors').text(result.error.message)
 
-					// Reload without parameters
-					window.location = window.location.pathname
+								return 
+							}
+						})
+
+					} else {
+
+						$('#upgradeModal').modal('hide')
+
+						alert("Account successfully upgraded")
+
+						// Reload without parameters
+						window.location = window.location.pathname
+					}
+
+					
 				
 				}).fail(e => {
 					$('#upgradeForm button .spinner-border').hide()
@@ -346,25 +370,31 @@
 				event.preventDefault()
 				$('#upgradeForm button .spinner-border').show()
 
+				let plan = $('[name="upgradePlan"]').val()
+
 				<% if (!sources.length) { %>
-				stripe.createToken(card1).then((result) => {
+				
+					stripe.createToken(card1).then((result) => {
 
-					if (result.error) {
-						$('#upgradeForm button .spinner-border').hide()
-						$('#upgradeForm .card-errors').text(result.error.message)
+						if (result.error) {
+							$('#upgradeForm button .spinner-border').hide()
+							$('#upgradeForm .card-errors').text(result.error.message)
 
-						return 
-					}
+							return 
+						}
 
-					let token = result.token.id
-					submitUpgrade(token)
-				})
+						let token = result.token
+
+						submitUpgrade(plan, token)
+					})
 				<% } else  { %>
-					submitUpgrade(null)
+					submitUpgrade(plan)
 				<% } %>
 			})
 
 		<% } %>
+
+		/*** Second element for the adding card flow **/
 		
 		let elements2 = stripe.elements()
 		let card2 = elements2.create('card', options)
@@ -379,33 +409,44 @@
 			
 			$('#cardForm button .spinner-border').show()
 
-			stripe.createToken(card2).then((result) => {
+			$.get('/billing/setupintent', data => {
 
-				if (result.error) {
-					$('#cardForm button .spinner-border').hide()
-					$('#cardForm .card-errors').text(result.error.message)
-					return 
-				}
+				console.log(data)
 
-				let token = result.token.id
-			
-				$.post('/billing/card', {
-					stripeToken: token
-				}, (data) => {
+				stripe.handleCardSetup(data.clientSecret, card2).then((result) => {
 
-					$( document ).trigger( "billing:cardadded" )
+					console.log(result)
 
-					// https://stackoverflow.com/questions/11519660/twitter-bootstrap-modal-backdrop-doesnt-disappear
-					$('#cardModal').modal('hide').on('hidden.bs.modal', function() {
-						billing.reload("#billingSection")
+					if (result.error) {
+						$('#cardForm button .spinner-border').hide()
+						$('#cardForm .card-errors').text(result.error.message)
+						return 
+					}
+
+					let paymentMethodId = result.setupIntent.payment_method
+				
+					$.post('/billing/card', {
+						paymentMethodId: paymentMethodId
+					}, (data) => {
+
+						$( document ).trigger( "billing:cardadded" )
+
+						// https://stackoverflow.com/questions/11519660/twitter-bootstrap-modal-backdrop-doesnt-disappear
+						$('#cardModal').modal('hide').on('hidden.bs.modal', function() {
+							billing.reload("#billingSection")
+						})
+
+					}).fail(e => {
+						$('#cardForm button .spinner-border').hide()
+						$('#cardForm .card-errors').text("We couldn't add your card. Please try again or with another card.")
+						console.error(e)
 					})
 
 				}).fail(e => {
 					$('#cardForm button .spinner-border').hide()
-					$('#cardForm .card-errors').text("We couldn't add your card. Please try again or with another card.")
+					$('#cardForm .card-errors').text("We couldn't contact our servers. Please try again later.")
 					console.error(e)
 				})
-
 			})
 		})
 
