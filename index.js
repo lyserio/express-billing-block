@@ -36,10 +36,40 @@ router.post('/webhook', asyncHandler(async (req, res, next) => {
 		// Send email for failed invoice payment
 		// Already handled by Stripe
 	
+	} else if (type === 'invoice.payment_succeeded') {
+
+		let reason = event.data.billing_reason
+		let customerId = event.data.object.customer
+		let subscriptionId = event.data.object.subscription
+
+		let subscription = await stripe.subscriptions.retrieve(subscriptionId)
+		let planId = subscription.metadata.planId
+		// Only triggers on upgrading or creating subscription
+
+		if (reason === 'subscription_create' || reason === 'subscription_update') {
+			
+			let user = await options.mongoUser.findOne({ 'stripe.customerId': customerId }).exec()
+			let plan = options.plans.find(p => p.id === planId)
+
+			user.plan = planId
+
+			await user.save()
+
+			if (options.onUpgrade && typeof options.onUpgrade === 'function') options.onUpgrade(user, plan.id)
+
+			sendMail("Thank you for upgrading", 
+`Hello,\n
+This is a confirmation email that you have successfully upgraded your account to the ${plan.name} plan.\n
+If you have any question or suggestion, simply reply to this email.\n
+Glad to have you on board :)`, user.email)
+
+		}
+	
 	} else if (type === 'customer.subscription.updated') {
 		
-		// Check status
-
+		// Triggers when the billing period ends and a new billing period begins, when switching from one plan to another, or switching status from trial to active
+		
+		// We check that this is only on-session when subscribing/upgrading by checking the idempotency_key that we set earlier.
 	
 	} else if (type === 'customer.subscription.deleted') {
 
@@ -70,13 +100,11 @@ We hope to see you back soon!`, user.email)
 	res.send({ received: true })
 }))
 
-const billing = async (customerId, user) => {
-	
-	if (!stripe) stripe = Stripe(options.secretKey)
+const billingInfos = async (customerId, user, getInvoices=true) => {
 
 	if (!customerId) {
 		return {
-			sources: [],
+			paymentMethods: [],
 			invoices: [],
 			upgradablePlans: options.plans,
 			subscriptions: [],
@@ -86,14 +114,18 @@ const billing = async (customerId, user) => {
 	}
 
 	let stripeCustomer = await stripe.customers.retrieve(customerId)
+	let paymentMethods = await stripe.paymentMethods.list({ customer: customerId, type: 'card' })
 
-	const paymentMethods = await stripe.paymentMethods.list({ customer: customerId, type: 'card' })
-
-	let sources = paymentMethods.data
 	let subscriptions = stripeCustomer.subscriptions.data
 
-	let defaultCard = sources.find(s => s.id = stripeCustomer.default_source)
-	if (defaultCard) defaultCard.isDefault = true
+	paymentMethods = paymentMethods.data.map((m) => {
+		if (m.id === stripeCustomer.invoice_settings.default_payment_method || 
+			m.id === stripeCustomer.default_source) { // default_source will be deprecated (i think)
+			m.isDefault = true
+		}
+
+		return m
+	})
 
 	subscriptions = subscriptions.map(sub => {
 
@@ -116,44 +148,49 @@ const billing = async (customerId, user) => {
 		return sub
 	})
 
-	let allInvoices = await stripe.invoices.list({
-		customer: customerId,
-		limit: 5 
-	})
+	if (getInvoices) {
 
-	if (options.showDraftInvoice) {
-		try {
-			let upcomingInvoice = await stripe.invoices.retrieveUpcoming(customerId)
-			allInvoices.data.unshift(upcomingInvoice)
-		} catch(e) {
-			// No upcoming invoices
-		}
-	}
-
-	allInvoices = allInvoices.data
-	.filter(invoice => invoice.amount_due > 0) // Only show 'real' invoices 
-	.map(invoice => {
-		invoice.amount = (invoice.amount_due / 100).toLocaleString('en-US', { 
-			style: 'currency', 
-			currency: 'USD'
+		var allInvoices = await stripe.invoices.list({
+			customer: customerId,
+			limit: 5 
 		})
 
-		// Because the invoice's own period isn't correct for the first invoice, we use the one from the first item
-		invoice.cleanPeriodEnd = moment(invoice.lines.data[0].period.end * 1000).format('ll')
-		invoice.cleanPeriodStart = moment(invoice.lines.data[0].period.start * 1000).format('ll')
+		if (options.showDraftInvoice) {
+			try {
+				let upcomingInvoice = await stripe.invoices.retrieveUpcoming(customerId)
+				allInvoices.data.unshift(upcomingInvoice)
+			} catch(e) {
+				// No upcoming invoices
+			}
+		}
 
-		invoice.date = moment(invoice.date * 1000).format('ll')
-		invoice.unpaid = (invoice.attempt_count > 1 && !invoice.paid)
+		allInvoices = allInvoices.data
+		.filter(invoice => invoice.amount_due > 0) // Only show 'real' invoices 
+		.map(invoice => {
+			invoice.amount = (invoice.amount_due / 100).toLocaleString('en-US', { 
+				style: 'currency', 
+				currency: 'USD'
+			})
 
-		return invoice
-	})
+			// Because the invoice's own period isn't correct for the first invoice, we use the one from the first item
+			invoice.cleanPeriodEnd = moment(invoice.lines.data[0].period.end * 1000).format('ll')
+			invoice.cleanPeriodStart = moment(invoice.lines.data[0].period.start * 1000).format('ll')
 
+			invoice.date = moment(invoice.date * 1000).format('ll')
+			invoice.unpaid = (invoice.attempt_count > 1 && !invoice.paid)
+
+			return invoice
+		})
+
+	}
+
+	// All the plans except the one we currently are
 	let upgradablePlans = (options.plans || []).filter(p => user.plan !== p.id && p.id !== 'free')
 
 	return {
-		sources: sources,
+		paymentMethods: paymentMethods,
 		upgradablePlans: upgradablePlans,
-		invoices: allInvoices,
+		invoices: getInvoices ? allInvoices : null,
 		subscriptions: subscriptions,
 		user: user,
 		options: options
@@ -166,15 +203,18 @@ router.use((req, res, next) => {
 
 	res.locals.customerId = req.user.stripeCustomerId || (req.user.stripe ? req.user.stripe.customerId : null)
 	res.locals.subscriptionId = req.user.subscription || (req.user.stripe ? req.user.stripe.subscriptionId : null)
+	
+	if (!stripe) stripe = Stripe(options.secretKey)
+
 	next()
 })
 
 router.get('/', asyncHandler(async (req, res, next) => {
 
 	const customerId = res.locals.customerId
-	const data = await billing(customerId, req.user)
+	const data = await billingInfos(customerId, req.user)
 
-	res.render(__dirname+'/billing.ejs', data)
+	res.render(__dirname+'/views/billing.ejs', data)
 }))
 
 router.get('/testcoupon', (req, res, next) => {
@@ -192,28 +232,39 @@ router.get('/testcoupon', (req, res, next) => {
 	})
 })
 
-
-const addCardToCustomer = async (user, customerId, paymentMethodId) => {
+// Adds a card to customer, which is created if it doesn't exist
+// Accepts either a paymentMethodId or a cardToken directly from Elements
+// returns the Stripe Customer ID
+const addCardToCustomer = async (user, customerId, paymentMethodId, cardToken) => {
 	
-	let stripe = Stripe(options.secretKey)
 	let customer = null
 
 	if (customerId) {
 
-		await stripe.paymentMethods.attach(paymentMethodId, { customer: customerId })
+		if (paymentMethodId) {
+			// Attach and set as default
+			await stripe.paymentMethods.attach(paymentMethodId, { customer: customerId })
+			await stripe.customers.update(customerId, { invoice_settings: { default_payment_method: paymentMethodId } })
+		} else {
+			await stripe.customers.update(customerId, { source: cardToken })
+		}
 
-	} else {
+		return customerId
+	} 
 
+	if (paymentMethodId) {
 		customer = await stripe.customers.create({ email: user.email, payment_method: paymentMethodId })
-
-		let dbUser = await options.mongoUser.findById(user.id).exec()
-		
-		dbUser.stripe.customerId = customer.id
-		
-		await dbUser.save()
+	} else {
+		customer = await stripe.customers.create({ email: user.email, source: cardToken })
 	}
 
-	return customer
+	let dbUser = await options.mongoUser.findById(user.id).exec()
+	
+	dbUser.stripe.customerId = customer.id
+	
+	await dbUser.save()
+
+	return customer.id
 }
 
 router.get('/setupintent', asyncHandler(async (req, res, next) => {
@@ -222,7 +273,6 @@ router.get('/setupintent', asyncHandler(async (req, res, next) => {
 
 	// Triggers authentication if needed
 	const setupIntent = await stripe.setupIntents.create({ usage: 'off_session' })
-
 
 	res.send({ clientSecret: setupIntent.client_secret })
 }))
@@ -236,14 +286,13 @@ router.post('/upgrade', asyncHandler(async (req, res, next) => {
 	if (!customerId && !token) return next("Sorry! We need a credit card to subscribe you.")
 
 	// If the customer doesn't have card or isn't a Stripe customer
-	if (paymentMethodId) { 
+	if (token) { 
 		try {
-			var customer = await addCardToCustomer(req.user, customerId, paymentMethodId)
+			customerId = await addCardToCustomer(req.user, customerId, null, token)
 		} catch(e) {
+			console.error(e)
 			return next("Sorry, we couldn't process your credit card. Please check with your bank.")
 		}
-
-		customerId = customer.id
 	}
 
 	let user = await options.mongoUser.findById(req.user.id).exec()
@@ -268,13 +317,16 @@ router.post('/upgrade', asyncHandler(async (req, res, next) => {
 
 		var subscription = await stripe.subscriptions.retrieve(subscriptionId)
 
-		await stripe.subscriptions.update(subscriptionId, {
+		subscription = await stripe.subscriptions.update(subscriptionId, {
 			coupon: coupon || undefined,
 			items: [{
 				id: subscription.items.data[0].id,
 				plan: plan.stripeId,
 			}],
 			expand: ['latest_invoice.payment_intent'],
+			metadata: {
+				planId: plan.id
+			}
 		})
 
 	} else {
@@ -286,11 +338,20 @@ router.post('/upgrade', asyncHandler(async (req, res, next) => {
 								payment_behavior: 'allow_incomplete',
 								items: [{ plan: plan.stripeId }],
 								expand: ['latest_invoice.payment_intent'],
+								metadata: {
+									planId: plan.id
+								}
 							})
 	}
 
+	// Following probably needs to be put in webhook
+	user.stripe.subscriptionId = subscription.id
+
+	await user.save()
+
 
 	if (subscription.status === 'incomplete') {
+		console.log(subscription)
 		// Requires SCA auth
 
 		// Depending if on-session or off-session, either waiting for card confirmation or payment confirmation
@@ -301,7 +362,7 @@ router.post('/upgrade', asyncHandler(async (req, res, next) => {
 		
 		} else if (subscription.latest_invoice.payment_intent) {
 		
-			var intent = latest_invoice.payment_intent
+			var intent = subscription.latest_invoice.payment_intent
 			var action = 'handleCardPayment'
 		
 		} else {
@@ -310,12 +371,16 @@ router.post('/upgrade', asyncHandler(async (req, res, next) => {
 		
 		}
 
-		if (paymentIntent.status === 'requires_action') {
+		// Means user need to do 3DSecure shit to complete payment
+		// "requires_source_action" and "requires_source" are deprecated, only for old API versions
+
+		if (['requires_action', 'requires_source_action'].includes(intent.status)) {
+
+			let secret = intent.client_secret
 			
-			let secret = paymentIntent.client_secret
-			res.send({ actionRequired: action, secret: intent.secret })
+			return res.send({ actionRequired: action, clientSecret: secret })
 		
-		} else if (intent.status === 'requires_payment_method') {
+		} else if (['requires_payment_method', 'requires_source'].includes(intent.status)) {
 			
 			return next('Please try with another card.')
 
@@ -323,23 +388,7 @@ router.post('/upgrade', asyncHandler(async (req, res, next) => {
 
 	}
 
-	res.send({  })
-
-	// Following needs to be put in webhook
-	user.plan = plan.id
-	user.stripe.subscriptionId = subscription.id
-
-	await user.save()
-
-	if (options.onUpgrade && typeof options.onUpgrade === 'function') options.onUpgrade(user, plan.id)
-
-	sendMail("Thank you for upgrading", 
-`Hello,\n
-This is a confirmation email that you have successfully upgraded your account to the ${plan.name} plan.\n
-If you have any question or suggestion, simply reply to this email.\n
-Glad to have you on board :)`, user.email)
-
-	
+	res.send({ })
 
 }))
 
@@ -349,24 +398,43 @@ router.post('/card', asyncHandler(async (req, res, next) => {
 	let paymentMethodId = req.body.paymentMethodId
 	let customerId = res.locals.customerId
 
-	try {
-		await addCardToCustomer(req.user, customerId, paymentMethodId)
-	} catch(e) {
-		return next(e)
-	}
+	await addCardToCustomer(req.user, customerId, paymentMethodId)
 
 	res.send({})
 }))
+
+router.get('/removecard', asyncHandler(async (req, res, next) => {
+
+	let paymentMethodId = req.query.id
+
+	await stripe.paymentMethods.detach(paymentMethodId)
+
+	res.redirect(options.accountPath)
+}))
+
+router.get('/setcarddefault', asyncHandler(async (req, res, next) => {
+
+	let paymentMethodId = req.query.id
+
+	await stripe.customers.update(res.locals.customerId, { 
+		invoice_settings: {
+			default_payment_method: paymentMethodId
+		} 
+	})
+
+	res.redirect(options.accountPath)
+}))
+
 
 router.get('/chooseplan', asyncHandler(async (req, res, next) => {
 
 	let customerId = res.locals.customerId
 
-	let data = await billing(customerId, req.user)
+	let data = await billingInfos(customerId, req.user, false)
 
 	data.redirect = options.choosePlanRedirect
 
-	res.render(__dirname+'/chooseplan', data)
+	res.render(__dirname+'/choosePlan', data)
 }))
 
 
@@ -383,7 +451,7 @@ router.get('/cancelsubscription', asyncHandler(async (req, res, next) => {
  	user.stripe.canceled = true
 	user.save()
 
-	res.redirect('/account#billing')
+	res.redirect(options.accountPath)
 }))
 
 router.get('/resumesubscription', asyncHandler(async (req, res, next) => {
@@ -399,7 +467,7 @@ router.get('/resumesubscription', asyncHandler(async (req, res, next) => {
 	user.stripe.canceled = false
 	user.save()
 
-	res.redirect('/account#billing')
+	res.redirect(options.accountPath)
 }))
 
 router.get('/billing.js', (req, res, next) => {
@@ -410,6 +478,8 @@ module.exports = (opts) => {
 	if (opts) options = opts
 
 	sendMail = options.sendMail || function () {}
+	
+	options.accountPath = options.accountPath || '/account#billing'
 
 	return router
 }

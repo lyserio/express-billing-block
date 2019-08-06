@@ -1,0 +1,136 @@
+// For the upgrade modal 
+// when you click on a plan
+function choosePlan(plan) {
+	$('[data-plan]').removeClass(['shadow', 'popular'])
+	$('[data-plan="'+plan+'"]').addClass(['shadow', 'popular'])
+	$('[data-plan] button').removeClass(['btn-primary', 'btn-outline-primary'])
+	$('[data-plan]:not([data-plan="'+plan+'"]) button').addClass('btn-outline-primary')
+	$('[data-plan="'+plan+'"] button').addClass('btn-primary')
+	$('#upgradeForm [name="upgradePlan"]').val(plan)
+	
+	if (plan === 'free') $('#cardStuff').hide()
+	else $('#cardStuff').show()
+	
+	let trial = parseInt($('[data-plan="'+plan+'"]').attr('data-trial'))
+	
+	if (trial) $('#trialWarning').show()
+	else $('#trialWarning').hide()
+}
+
+$('[data-plan] button').click(function() {
+	let id = $(this).parents('[data-plan]').attr('data-plan')
+	choosePlan(id)
+})
+
+// Automatic coupon detection & confirmation
+
+function findGetParameter(parameterName) {
+	var result = null, tmp = [];
+	var items = location.search.substr(1).split("&");
+	for (var index = 0; index < items.length; index++) {
+		tmp = items[index].split("=");
+		if (tmp[0] === parameterName) result = decodeURIComponent(tmp[1]);
+	}
+	return result;
+}
+
+
+var coupon = findGetParameter('coupon')
+if (coupon) {
+	console.log('Coupon detected: '+coupon)
+
+	$.get('/billing/testcoupon?code='+coupon, function(data) {
+		if (data.valid) {
+			$('#coupon').val(coupon)
+			$('#couponDescription').html("<span class='text-success'>Applied: "+data.description+"</span>")
+		} else {
+			$('#couponDescription').html("<span class='text-danger'>Invalid coupon.</span>")
+		}
+	})
+}
+
+
+<% if (!paymentMethods.length) { %>
+
+	let elements1 = stripe.elements()
+	let card1 = elements1.create('card', options)
+	card1.mount('#upgradeForm .card-element')
+	card1.addEventListener('change', (event) => {
+		 $('#upgradeForm .card-errors').text(event.error ? event.error.message : '')
+	})
+
+<% } %>
+
+<% if (upgradablePlans.length) { %>
+
+	choosePlan('<%= upgradablePlans[0].id %>')
+
+	function successUpgrading() {
+		alert("Account successfully upgraded!")
+
+		// Reload without parameters
+		window.location = <%- locals.redirect ? "'"+redirect+"'": 'window.location.pathname' %> 
+	}
+
+	function submitUpgrade(plan, token) {
+
+		let coupon = $('#upgradeForm [name="coupon"]').val()
+
+		$.post('/billing/upgrade', {
+			token: token,
+			upgradePlan: plan,
+			coupon: coupon
+		}, function(data) {
+
+			console.log(data)
+
+			// If SCA not needed
+			if (!data.actionRequired) return successUpgrading()
+				
+			stripe[data.actionRequired](data.clientSecret).then(function(result) {
+
+				if (result.error) {
+					$('#upgradeForm button .spinner-border').hide()
+					$('#upgradeForm .card-errors').text(result.error.message)
+
+					return 
+				}
+
+				successUpgrading()
+			})
+		
+		}).fail(e => {
+			$('#upgradeForm button .spinner-border').hide()
+			$('#upgradeForm .card-errors').text(e.responseJSON.error)
+			console.error(e.responseJSON)
+		})
+	}
+
+	$('#upgradeForm').submit((event) => {
+		
+		event.preventDefault()
+		$('#upgradeForm button .spinner-border').show()
+		$('#upgradeForm .card-errors').text("")
+
+		let plan = $('#upgradeForm [name="upgradePlan"]').val()
+
+		<% if (!paymentMethods.length) { %>
+		
+			stripe.createToken(card1).then((result) => {
+
+				if (result.error) {
+					$('#upgradeForm button .spinner-border').hide()
+					$('#upgradeForm .card-errors').text(result.error.message)
+
+					return 
+				}
+
+				let token = result.token.id
+
+				submitUpgrade(plan, token)
+			})
+		<% } else  { %>
+			submitUpgrade(plan)
+		<% } %>
+	})
+<% } %>

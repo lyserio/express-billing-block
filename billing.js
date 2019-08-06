@@ -1,6 +1,6 @@
 let billing = {
 
-	reload: (selector="billingSection", callback) => {
+	load: (selector="billingSection", callback) => {
 		$(selector).html(`
 			<div class="d-flex align-items-center">
 				<p>Loading...</p>
@@ -12,15 +12,20 @@ let billing = {
 
 			$(selector).html(result)
 
-			// Load Stripe
+			// Load Stripe asynchronously
 			var head = document.getElementsByTagName('head')[0]
 			var script = document.createElement('script')
 			script.type = 'text/javascript'
 			script.onload = () => { initStripe() }
 			script.src = 'https://js.stripe.com/v3/'
 			head.appendChild(script)
+
+			if (window.location.href.indexOf("upgrade") > -1) {
+				$("#tempOverlaySpinner").remove()
+				billing.upgradeModal()
+			}
 			
-			if (callback)callback()
+			if (callback) callback()
 
 		}).fail(e => {
 			console.error(e)
@@ -43,11 +48,3 @@ if(window.location.href.indexOf("upgrade") > -1) {
 		</div>
 	`)
 }
-
-billing.reload("#billingSection", () => {
-	if(window.location.href.indexOf("upgrade") > -1) {
-		$("#tempOverlaySpinner").remove()
-		billing.upgradeModal()
-	}
-})
-

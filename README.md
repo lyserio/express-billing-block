@@ -6,20 +6,21 @@ An Express (4.0+) middleware for rendering billing pages to your users, directly
 
 Designed for MongoDB. 
 
-*Requires Bootstrap 4 (CSS + JS) and jQuery on your client side.* 
+*Requires Bootstrap 4 (CSS + JS), jQuery, and Open Iconic on your client side.* 
 
-The goal is to be a drop-in helper for handling and managing Stripe subscriptions.
-Useful for showing your users status of their subscriptions, their invoices, manage their cards, etc..
+The goal is to be a drop-in module for handling and managing Stripe subscriptions.
+Useful for showing your users status of their subscriptions, their invoices, and allow them to manage their subscriptions and cards on their own.
 
 ## Features
 
 - [x] Upgrade popups
 - [x] List of recent invoices
+- [x] Support SCA (3D secure)
 - [x] Display alert in case of payment failure
 - [x] List active subscription plans
-- [x] List credit cards, add new ones
+- [x] Manage credit cards
 - [x] Button to self stop subscriptions
-- [ ] Support coupons in the URL
+- [x] Support coupons in the URL
 
 ## Who uses it?
 
@@ -37,12 +38,16 @@ Useful for showing your users status of their subscriptions, their invoices, man
 	<td align="center">
 		<a href="https://litch.app"><img src="https://litch.app/img/logo.png" height="64" /></a>
 	</td>
+	<td align="center">
+		<a href="https://musli.io"><img src="https://musli.io/icon.svg" height="64" /></a>
+	</td>
 </tr>
 <tr>
 	<td align="center">Nucleus</td>
 	<td align="center">ElioPay</td>
 	<td align="center">Backery</td>
 	<td align="center">Litch.app</td>
+	<td align="center">Musli.io</td>
 </tr>
 </table>
 
@@ -82,6 +87,7 @@ app.use('/billing', require('express-billing-page')({
 	secretKey: "sk_live_xxxxxxxxxxxxxxxxxxxxxxx",
 	publicKey: "pk_live_xxxxxxxxxxxxxxxxxxxxxxx",
 	upgradable: true, // Will offer a popup to upgrade plans
+	accountPath: '/account', // So the redirects don't fail
 	sendMail: (subject, text, email) => {
 		// Send a mail with the library of your choice
 		// For upgrades, card changes, etc...
@@ -113,10 +119,14 @@ app.use('/billing', require('express-billing-page')({
 
 Simple client code example (**jQuery & bootstrap.js are required**):
 
-Will auto populate the div `#billingSection`.
+.
 
-```javascript
+```html
+<h1>Your subscription</h1>
 <div id='billingSection'></div>
 
 <script src='/billing/billing.js'></script>
+<script>
+	billing.load('#billingSection')
+</script>
 ```

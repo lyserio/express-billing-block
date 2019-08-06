@@ -1,0 +1,97 @@
+<style>
+	.card-deck {
+		margin: auto;
+	}
+
+	.card-pricing {
+		max-width: 400px;
+	}
+
+	.card-pricing.popular {
+		z-index: 1;
+		border: 3px solid #007bff;
+	}
+
+	.card-element {
+		max-width: 600px;
+	}
+
+	.card-pricing .list-unstyled li {
+		padding: .4rem 0;
+		color: #6c757d;
+	}
+</style>
+<form id='upgradeForm' class="text-center ">
+	<div class="card-deck justify-content-center flex-column flex-md-row mb-3">
+
+		<% for (let plan of upgradablePlans) { %>
+			<div data-trial='<%= plan.trial || 0 %>'  data-plan='<%= plan.id %>' class="card card-pricing text-center px-3 mb-4"> <!-- add 'popular shadow' classes to select -->
+				<span class="h6 w-60 mx-auto px-4 py-1 rounded-bottom bg-primary text-white shadow-sm"><%= plan.name %></span>
+				<div class="bg-transparent card-header pt-4 border-0">
+					<h1 class="h1 font-weight-normal text-primary text-center mb-0" data-pricing-value="<%= plan.price %>">$<span class="price"><%= plan.price %></span><span class="h6 text-muted ml-2">/ per month</span></h1>
+
+					<% if (plan.trial ) { // && !subscriptions.length %>
+						<br>
+						<p class="text-success"><%= plan.trial %> days free trial</p>
+					<% } %>
+					
+				</div>
+				<div class="card-body pt-0">
+					<ul class="list-unstyled mb-4">
+						<% for (let gig of (plan.advantages || plan.perks).filter(p => !p.minor)) { %>
+							<li><%= gig.title %></li>
+						<% } %>
+					</ul>
+
+					<% if (upgradablePlans.length > 1) { %>
+						<button type="button" class="btn btn-outline-primary mb-3">Select</button>
+					<% } %>
+
+				</div>
+
+			</div>
+		<% } %>
+
+	</div>
+
+	<input type="hidden" name="upgradePlan" value="free">
+
+	<div class="row align-items-center justify-content-between m-auto">
+		<div class='col-md-auto text-left'>
+
+			<span id='couponDescription'></span>
+			<input type='hidden' name='coupon' id='coupon' />
+
+			<div id='cardStuff'>
+
+				<% if (subscriptions.length) { %>
+			
+					<small>Your existing subscription will be adjusted to the new amount.</small>
+				
+				<% } else { %>
+				
+					<small id='trialWarning'>Billing will start at the end of the trial period if you haven't canceled.</small>
+				
+				<% } %>
+
+				<% if (!paymentMethods.length) { %>
+					<div class="my-3">
+						<div class='card-element form-control'></div>
+						<div class='card-errors error text-danger' role="alert"></div>
+					</div>
+
+					<small>Card stored securely with <a target='_blank' href='https://stripe.com'>Stripe</a></small>
+				<% } %>
+
+			</div>
+
+		</div>
+
+		<div class="col-md-auto">
+			<button type="submit" class="btn btn-primary">
+				<span style='display:none' class="spinner-border spinner-border-sm" role="status"></span>
+				<span>Continue →</span>
+			</button>
+		</div>
+	</div>
+</form>

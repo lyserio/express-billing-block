@@ -38,23 +38,27 @@
 <br>
 
 
-<% if (sources.length) { %> 
+<% if (paymentMethods.length) { %> 
 	<p><b>Payment method</b></p>
 	
-	<button type="button" class="btn btn-sm btn-primary" data-toggle="modal" data-target="#cardModal">Add a new card</button>
+	<button type="button" class="btn btn-sm btn-primary" data-toggle="modal" data-target="#cardModal">+ Add a new card</button>
 
 	<ul class="list-group py-3 mb-1">
-		<% for (let source of sources) { %>
+		<% for (let method of paymentMethods) { %>
 			<li class="list-group-item d-flex justify-content-between align-items-center">
 
-				<span><img class='mr-2' src='https://rawcdn.githack.com/FreshVine/Payment-Methods-SVG/c441556f81b9a9950ab03d0d96b27fb1493ce22a/icons/cards/<%= source.card.brand %>.svg' width=30/>  <b>···· ···· ····</b> <%= source.card.last4 %> <span class="badge badge-warning">exp <%= source.card.exp_year %></span></span>
+				<span>
+					<img class='mr-2' src='https://rawcdn.githack.com/FreshVine/Payment-Methods-SVG/c441556f81b9a9950ab03d0d96b27fb1493ce22a/icons/cards/<%= method.card.brand %>.svg' width=30/>
+					 <b>···· ···· ····</b> <%= method.card.last4 %> 
+					 <span class="badge badge-<%= method.card.exp_year > new Date().getFullYear() ? 'success' : ( method.card.exp_year < new Date().getFullYear() ? 'danger' : 'warning') %>">exp <%= method.card.exp_year %></span>
+				</span>
 				
-				<% if (source.isDefault) { %>
-					<span class="badge badge-primary">selected</span>
+				<% if (method.isDefault) { %>
+					<span class="badge badge-success">in use</span>
 				<% } else { %>
 					<div>
-						<a href='#' class="btn-primary btn btn-sm small">select</a>
-						<a href='#' class="btn-danger btn btn-sm small">remove</a>
+						<a href='/billing/setcarddefault?id=<%= method.id %>' class="btn-primary btn btn-sm small">select</a>
+						<a onclick="return confirm('Are you sure you want to delete this card?');" href='/billing/removecard?id=<%= method.id %>' class="text-danger small"><span class="oi oi-trash"></span></a>
 					</div>
 				<% } %>
 
@@ -179,7 +183,7 @@
 
 							<button type="submit" class="btn btn-primary">
 								<span style='display:none' class="spinner-border spinner-border-sm"></span>
-								<span>Add</span>
+								<span>Add →</span>
 							</button>
 						</div>
 					</div>
@@ -207,71 +211,13 @@
 				</button>
 
 			</div>
-			
-			<form id='upgradeForm'>
-				<div class="modal-body">
-					<div class="container-fluid">
-						<div class="card-deck flex-column flex-md-row mb-3">
 
-							<% for (let plan of upgradablePlans) { %>
-								<div data-plan='<%= plan.id %>' class="card card-pricing text-center px-3 mb-4"> <!-- add 'popular shadow' classes to select -->
-									<span class="h6 w-60 mx-auto px-4 py-1 rounded-bottom bg-primary text-white shadow-sm"><%= plan.name %></span>
-									<div class="bg-transparent card-header pt-4 border-0">
-										<h1 class="h1 font-weight-normal text-primary text-center mb-0" data-pricing-value="<%= plan.price %>">$<span class="price"><%= plan.price %></span><span class="h6 text-muted ml-2">/ per month</span></h1>
-
-										<% if (plan.trial ) { // && !subscriptions.length %>
-											<br>
-											<p class="text-success"><%= plan.trial %> days free trial</p>
-										<% } %>
-										
-									</div>
-									<div class="card-body pt-0">
-										<ul class="list-unstyled mb-4">
-											<% for (let gig of (plan.advantages || plan.perks).filter(p => !p.minor)) { %>
-												<li><%= gig.title %></li>
-											<% } %>
-										</ul>
-
-										<% if (upgradablePlans.length > 1) { %>
-											<button onclick='choosePlan("<%= plan.id %>")' type="button" class="btn btn-outline-primary mb-3">Choose</button>
-										<% } %>
-
-									</div>
-
-								</div>
-							<% } %>
-
-						</div>
-
-						<input type="hidden" name="upgradePlan" value="free">
-						
-						<div class="row">
-							<div class='col-md-8' id='cardStuff'>
-								<% if (subscriptions.length) { %>
-									
-									<p><small>Your existing subscription will be adjusted to the new amount.</small></p>
-
-								<% } %>
-
-								<% if (!sources.length) { %>
-									<div class='card-element form-control'></div>
-									<div class='card-errors error text-danger' role="alert"></div>
-									<br>
-									<small>Card stored securely with Stripe.</small>
-								<% } %>
-							</div>
-
-							<div class="col">
-								<button type="submit" class="float-right btn btn-primary">
-									<span style='display:none' class="spinner-border spinner-border-sm" role="status"></span>
-									<span>Continue</span>
-								</button>
-							</div>
-						</div>
-
-					</div>
+			<div class="modal-body">
+				<div class="container-fluid">
+					<% include upgradeForm.ejs %>
 				</div>
-			</form>
+			</div>
+
 		</div>
 	</div>
 </div>
@@ -279,25 +225,9 @@
 
 <script>
 
-	// For the upgrade modal 
-	function choosePlan(plan) {
-		$('[data-plan]').removeClass(['shadow', 'popular'])
-		$('[data-plan="'+plan+'"]').addClass(['shadow', 'popular'])
-
-		$('[data-plan] button').removeClass(['btn-primary', 'btn-outline-primary'])
-
-		$('[data-plan]:not([data-plan="'+plan+'"]) button').addClass('btn-outline-primary')
-		$('[data-plan="'+plan+'"] button').addClass('btn-primary')
-
-		$('[name="upgradePlan"]').val(plan)
-
-		if (plan === 'free') $('#cardStuff').hide()
-		else $('#cardStuff').show()
-	}
-
-	
-
 	function initStripe() {
+
+		console.log('Initing Stripe module')
 
 		let stripe = Stripe("<%= options.publicKey %>")
 
@@ -306,7 +236,7 @@
 			base: {
 				fontSmoothing: 'antialiased',
 				fontSize: '16px',
-				lineHeight: '1.5'
+				lineHeight: '1.7'
 			},
 			invalid: {
 				color: '#fa755a',
@@ -314,83 +244,9 @@
 			}
 		}}
 
-		<% if (options.upgradable && !sources.length) { %>
-
-			let elements1 = stripe.elements()
-			let card1 = elements1.create('card', options)
-			card1.mount('#upgradeForm .card-element')
-			card1.addEventListener('change', (event) => {
-				 $('#upgradeForm .card-errors').text(event.error ? event.error.message : '')
-			})
-
-		<% } %>
-
-		<% if (options.upgradable && upgradablePlans.length) { %>
-			choosePlan('<%= upgradablePlans[0].id %>')
-
-			function submitUpgrade(plan, token) {
-
-				$.post('/billing/upgrade', {
-					token: token,
-					upgradePlan: plan
-				}, function(data) {
-
-					if (data.actionRequired) {
-						
-						stripe[data.actionRequired](data.secret).then(function(result) {
-
-							if (result.error) {
-								$('#upgradeForm button .spinner-border').hide()
-								$('#upgradeForm .card-errors').text(result.error.message)
-
-								return 
-							}
-						})
-
-					} else {
-
-						$('#upgradeModal').modal('hide')
-
-						alert("Account successfully upgraded")
-
-						// Reload without parameters
-						window.location = window.location.pathname
-					}
-
-					
-				
-				}).fail(e => {
-					$('#upgradeForm button .spinner-border').hide()
-					$('#upgradeForm .card-errors').text(e.message)
-					console.error(e)
-				})
-			}
-
-			$('#upgradeForm').submit((event) => {
-				event.preventDefault()
-				$('#upgradeForm button .spinner-border').show()
-
-				let plan = $('[name="upgradePlan"]').val()
-
-				<% if (!sources.length) { %>
-				
-					stripe.createToken(card1).then((result) => {
-
-						if (result.error) {
-							$('#upgradeForm button .spinner-border').hide()
-							$('#upgradeForm .card-errors').text(result.error.message)
-
-							return 
-						}
-
-						let token = result.token
-
-						submitUpgrade(plan, token)
-					})
-				<% } else  { %>
-					submitUpgrade(plan)
-				<% } %>
-			})
+		<% if (options.upgradable) { %> 
+			
+			<% include upgrade.js.ejs %>
 
 		<% } %>
 
@@ -403,7 +259,6 @@
 			$('#cardForm .card-errors').text(event.error ? event.error.message : '')
 		})
 
-
 		$('#cardForm').submit(function(event) {
 			event.preventDefault()
 			
@@ -411,11 +266,7 @@
 
 			$.get('/billing/setupintent', data => {
 
-				console.log(data)
-
 				stripe.handleCardSetup(data.clientSecret, card2).then((result) => {
-
-					console.log(result)
 
 					if (result.error) {
 						$('#cardForm button .spinner-border').hide()
