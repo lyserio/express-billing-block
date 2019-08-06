@@ -71,6 +71,11 @@ let UserSchema = {
 }
 ```
 
+- Set a Stripe webhook to https://your-site-url.com/billing/webhook and subscribe to:
+	- `invoice.payment_succeeded`
+	- `customer.subscription.deleted`
+	- `customer.subscription.updated`
+
 ## Usage
 
 Install the library

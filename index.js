@@ -38,6 +38,8 @@ router.post('/webhook', asyncHandler(async (req, res, next) => {
 	
 	} else if (type === 'invoice.payment_succeeded') {
 
+		// what about downgrade
+
 		let reason = event.data.billing_reason
 		let customerId = event.data.object.customer
 		let subscriptionId = event.data.object.subscription
