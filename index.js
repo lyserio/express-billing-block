@@ -200,12 +200,14 @@ const billingInfos = async (customerId, user, getInvoices=true) => {
 
 	}
 
-	// All the plans except the one we currently are
-	let upgradablePlans = (options.plans || []).filter(p => user.plan !== p.id && p.id !== 'free')
-
+	// All the plans except the one we currently are (and the free plan)
+	let upgradablePlans = (options.plans || []).filter(p => p.id !== 'free')
+	let userPlan = (options.plans || []).find(p => p.id === user.plan)
+	
 	return {
 		paymentMethods: paymentMethods,
 		upgradablePlans: upgradablePlans,
+		userPlan: userPlan,
 		invoices: getInvoices ? allInvoices : null,
 		subscriptions: subscriptions,
 		user: user,

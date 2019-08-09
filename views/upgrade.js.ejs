@@ -12,9 +12,12 @@ function choosePlan(plan) {
 	else $('#cardStuff').show()
 	
 	let trial = parseInt($('[data-plan="'+plan+'"]').attr('data-trial'))
+	let name = $('[data-plan="'+plan+'"]').attr('data-name')
 	
 	if (trial) $('#trialWarning').show()
 	else $('#trialWarning').hide()
+
+	$('#planName').text('to ' + name)
 }
 
 $('[data-plan] button').click(function() {
@@ -61,15 +64,18 @@ if (coupon) {
 
 <% } %>
 
-<% if (upgradablePlans.length) { %>
+<% if (upgradablePlans.filter(p => p.id !== user.plan).length) { %>
 
-	choosePlan('<%= upgradablePlans[0].id %>')
+	let firstSelect = '<%= upgradablePlans.filter(p => p.id !== user.plan)[0].id %>';
+	choosePlan(firstSelect)
 
 	function successUpgrading() {
-		alert("Account successfully upgraded!")
+		$('#upgradeSuccess').show()
 
-		// Reload without parameters
-		window.location = <%- locals.redirect ? "'"+redirect+"'": 'window.location.pathname' %> 
+		setTimeout(() => {
+			// Reload without parameters
+			window.location = <%- locals.redirect ? "'"+redirect+"'": 'window.location.pathname' %> 
+		}, 3000)
 	}
 
 	function submitUpgrade(plan, token) {
@@ -81,8 +87,6 @@ if (coupon) {
 			upgradePlan: plan,
 			coupon: coupon
 		}, function(data) {
-
-			console.log(data)
 
 			// If SCA not needed
 			if (!data.actionRequired) return successUpgrading()
