@@ -74,18 +74,16 @@ Glad to have you on board :)`, user.email)
 		const planId 		= subscription.metadata.planId
 		const customer 		= subscription.customer
 		
-		if (user.stripe.subscriptionStatus) user.stripe.subscriptionStatus = currentStatus
-
 		let user = await options.mongoUser.findOne({'stripe.customerId': customer}).exec()
 
-		if (acceptableStatus.includes(currentStatus)) {
+		if (user.stripe.subscriptionStatus) user.stripe.subscriptionStatus = currentStatus
 
-			if (user.plan) user.plan = planId
-
-		} else {
-
-			if (user.plan) user.plan = 'free'
-		
+		if (user.plan) {
+			if (acceptableStatus.includes(currentStatus)) {
+				 user.plan = planId
+			} else {
+				user.plan = 'free'
+			}
 		}
 
 		if (options.onSubscriptionChange && typeof options.onSubscriptionChange === 'function') options.onSubscriptionChange(user)
@@ -303,8 +301,8 @@ router.post('/upgrade', asyncHandler(async (req, res, next) => {
 	const planId 		= req.body.upgradePlan
 
 	// These two are most probably undefined 
-	const customerId 	= res.locals.customerId
 	const subscriptionId = res.locals.subscriptionId
+	let customerId 	= res.locals.customerId
 
 	if (!customerId && !token) return next("Sorry! We need a credit card to subscribe you.")
 
