@@ -39,23 +39,18 @@ router.post('/webhook', asyncHandler(async (req, res, next) => {
 	} else if (type === 'invoice.payment_succeeded') {
 
 		// what about downgrade
+		const invoice 			= event.data.object
+		const reason 			= invoice.billing_reason
+		const customerId 		= invoice.customer
+		const subscriptionId 	= invoice.subscription
 
-		let reason = event.data.billing_reason
-		let customerId = event.data.object.customer
-		let subscriptionId = event.data.object.subscription
+		const subscription 		= await stripe.subscriptions.retrieve(subscriptionId)
+		const planId 			= subscription.metadata.planId
 
-		let subscription = await stripe.subscriptions.retrieve(subscriptionId)
-		let planId = subscription.metadata.planId
 		// Only triggers on upgrading or creating subscription
-
 		if (reason === 'subscription_create' || reason === 'subscription_update') {
 			
 			let user = await options.mongoUser.findOne({ 'stripe.customerId': customerId }).exec()
-			let plan = options.plans.find(p => p.id === planId)
-
-			user.plan = planId
-
-			await user.save()
 
 			if (options.onUpgrade && typeof options.onUpgrade === 'function') options.onUpgrade(user, plan.id)
 
@@ -70,13 +65,37 @@ Glad to have you on board :)`, user.email)
 	} else if (type === 'customer.subscription.updated') {
 		
 		// Triggers when the billing period ends and a new billing period begins, when switching from one plan to another, or switching status from trial to active
+
+		// Either ones of these status means the user has the right to access the product
+		const acceptableStatus = ['trialing', 'active', 'incomplete', 'past_due']
 		
-		// We check that this is only on-session when subscribing/upgrading by checking the idempotency_key that we set earlier.
-	
+		const subscription 	= event.data.object
+		const currentStatus = subscription.status
+		const planId 		= subscription.metadata.planId
+		const customer 		= subscription.customer
+		
+		if (user.stripe.subscriptionStatus) user.stripe.subscriptionStatus = currentStatus
+
+		let user = await options.mongoUser.findOne({'stripe.customerId': customer}).exec()
+
+		if (acceptableStatus.includes(currentStatus)) {
+
+			if (user.plan) user.plan = planId
+
+		} else {
+
+			if (user.plan) user.plan = 'free'
+		
+		}
+
+		if (options.onSubscriptionChange && typeof options.onSubscriptionChange === 'function') options.onSubscriptionChange(user)
+
+		await user.save()
+			
 	} else if (type === 'customer.subscription.deleted') {
 
-		let customerId = event.data.object.customer
-		let subscriptionId = event.data.object.id
+		const subscription 	= event.data.object
+		const customerId 	= subscription.customer
 
 		let user = await options.mongoUser.findOne({'stripe.customerId': customerId}).exec()
 		
@@ -84,10 +103,7 @@ Glad to have you on board :)`, user.email)
 		user.stripe.subscriptionId = null
 		user.stripe.subscriptionItems = []
 		user.stripe.canceled = false
-		user.save()
-
-		if (options.onCancel && typeof options.onCancel === 'function') options.onCancel(user)
-
+		await user.save()
 
 		sendMail(`Subscription canceled - ${options.siteName}`, 
 `Hello,\n
@@ -271,7 +287,7 @@ const addCardToCustomer = async (user, customerId, paymentMethodId, cardToken) =
 
 router.get('/setupintent', asyncHandler(async (req, res, next) => {
 
-	let customerId = res.locals.customerId
+	const customerId = res.locals.customerId
 
 	// Triggers authentication if needed
 	const setupIntent = await stripe.setupIntents.create({ usage: 'off_session' })
@@ -282,8 +298,13 @@ router.get('/setupintent', asyncHandler(async (req, res, next) => {
 
 router.post('/upgrade', asyncHandler(async (req, res, next) => {
 
-	let token = req.body.token
-	let customerId = res.locals.customerId
+	const token 		= req.body.token
+	const couponCode 	= req.body.coupon
+	const planId 		= req.body.upgradePlan
+
+	// These two are most probably undefined 
+	const customerId 	= res.locals.customerId
+	const subscriptionId = res.locals.subscriptionId
 
 	if (!customerId && !token) return next("Sorry! We need a credit card to subscribe you.")
 
@@ -299,26 +320,20 @@ router.post('/upgrade', asyncHandler(async (req, res, next) => {
 
 	let user = await options.mongoUser.findById(req.user.id).exec()
 
-	let planId = req.body.upgradePlan
-
-	let plan = options.plans.find(plan => plan.id === planId)
+	const plan = options.plans.find(plan => plan.id === planId)
 	if (!plan) return next('Invalid plan.')
 
 	// If we supplied a coupon
-	let couponCode = req.body.coupon
 	let coupon = null
 	if (options.coupons && options.coupons.find(c => c.code === couponCode)) {
 		coupon = couponCode
 	}
 
-	let stripe = Stripe(options.secretKey)
-
-	let subscriptionId = res.locals.subscriptionId
-
 	if (subscriptionId) {
 
-		var subscription = await stripe.subscriptions.retrieve(subscriptionId)
+		// https://stripe.com/docs/billing/subscriptions/upgrading-downgrading
 
+		var subscription = await stripe.subscriptions.retrieve(subscriptionId)
 		subscription = await stripe.subscriptions.update(subscriptionId, {
 			coupon: coupon || undefined,
 			items: [{
@@ -327,7 +342,7 @@ router.post('/upgrade', asyncHandler(async (req, res, next) => {
 			}],
 			expand: ['latest_invoice.payment_intent'],
 			metadata: {
-				planId: plan.id
+				planId: planId
 			}
 		})
 
@@ -337,26 +352,26 @@ router.post('/upgrade', asyncHandler(async (req, res, next) => {
 								coupon: coupon || undefined,
 								customer: customerId,
 								trial_from_plan: true,
-								payment_behavior: 'allow_incomplete',
+								payment_behavior: 'allow_incomplete',  // For legacy API versions
 								items: [{ plan: plan.stripeId }],
 								expand: ['latest_invoice.payment_intent'],
 								metadata: {
-									planId: plan.id
+									planId: planId
 								}
 							})
 	}
 
-	// Following probably needs to be put in webhook
+	// So the user can start using the app ASAP
+	user.plan = planId
 	user.stripe.subscriptionId = subscription.id
 
 	await user.save()
 
-
 	if (subscription.status === 'incomplete') {
-		console.log(subscription)
-		// Requires SCA auth
+		// That means it requires SCA auth
 
-		// Depending if on-session or off-session, either waiting for card confirmation or payment confirmation
+		// Depending if on-session or off-session
+		// Either waiting for Card saving confirmation or direct Payment confirmation
 		if (subscription.pending_setup_intent) {
 
 			var intent = subscription.pending_setup_intent
@@ -373,7 +388,7 @@ router.post('/upgrade', asyncHandler(async (req, res, next) => {
 		
 		}
 
-		// Means user need to do 3DSecure shit to complete payment
+		// Means user need to do SCA/3DSecure shit to complete payment
 		// "requires_source_action" and "requires_source" are deprecated, only for old API versions
 
 		if (['requires_action', 'requires_source_action'].includes(intent.status)) {
@@ -397,8 +412,8 @@ router.post('/upgrade', asyncHandler(async (req, res, next) => {
 
 router.post('/card', asyncHandler(async (req, res, next) => {
 
-	let paymentMethodId = req.body.paymentMethodId
-	let customerId = res.locals.customerId
+	const paymentMethodId = req.body.paymentMethodId
+	const customerId = res.locals.customerId
 
 	await addCardToCustomer(req.user, customerId, paymentMethodId)
 
@@ -407,7 +422,7 @@ router.post('/card', asyncHandler(async (req, res, next) => {
 
 router.get('/removecard', asyncHandler(async (req, res, next) => {
 
-	let paymentMethodId = req.query.id
+	const paymentMethodId = req.query.id
 
 	await stripe.paymentMethods.detach(paymentMethodId)
 
@@ -416,7 +431,7 @@ router.get('/removecard', asyncHandler(async (req, res, next) => {
 
 router.get('/setcarddefault', asyncHandler(async (req, res, next) => {
 
-	let paymentMethodId = req.query.id
+	const paymentMethodId = req.query.id
 
 	await stripe.customers.update(res.locals.customerId, { 
 		invoice_settings: {
@@ -430,13 +445,13 @@ router.get('/setcarddefault', asyncHandler(async (req, res, next) => {
 
 router.get('/chooseplan', asyncHandler(async (req, res, next) => {
 
-	let customerId = res.locals.customerId
+	const customerId = res.locals.customerId
 
 	let data = await billingInfos(customerId, req.user, false)
 
 	data.redirect = options.choosePlanRedirect
 
-	res.render(__dirname+'/choosePlan', data)
+	res.render(__dirname + '/views/choosePlan', data)
 }))
 
 
@@ -444,7 +459,7 @@ router.get('/cancelsubscription', asyncHandler(async (req, res, next) => {
 
 	let user = await options.mongoUser.findById(req.user.id).exec()
 
-	let subscriptionId = res.locals.subscriptionId
+	const subscriptionId = res.locals.subscriptionId
 
 	await stripe.subscriptions.update(subscriptionId, {
  		cancel_at_period_end: true
@@ -458,7 +473,7 @@ router.get('/cancelsubscription', asyncHandler(async (req, res, next) => {
 
 router.get('/resumesubscription', asyncHandler(async (req, res, next) => {
 
-	let subscriptionId = res.locals.subscriptionId
+	const subscriptionId = res.locals.subscriptionId
 
 	let user = await options.mongoUser.findById(req.user.id).exec()
 

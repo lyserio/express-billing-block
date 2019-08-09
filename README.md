@@ -1,7 +1,5 @@
 # express-billing-page
 
-*Still in testing*
-
 An Express (4.0+) middleware for rendering billing pages to your users, directly connected to Stripe.
 
 Designed for MongoDB. 
@@ -9,17 +7,20 @@ Designed for MongoDB.
 *Requires Bootstrap 4 (CSS + JS), jQuery, and Open Iconic on your client side.* 
 
 The goal is to be a drop-in module for handling and managing Stripe subscriptions.
-Useful for showing your users status of their subscriptions, their invoices, and allow them to manage their subscriptions and cards on their own.
+
+Show your users a status of their subscriptions, a list of invoices, and allow them to manage their subscriptions and cards on their own.
+
 
 ## Features
 
 - [x] Upgrade popups
-- [x] List of recent invoices
+- [x] List of recent invoices to download
 - [x] Support SCA (3D secure)
 - [x] Display alert in case of payment failure
 - [x] List active subscription plans
-- [x] Manage credit cards
-- [x] Button to self stop subscriptions
+- [x] Add/remove/select credit cards
+- [x] Support trials (with credit card)
+- [x] Button to self cancel subscriptions
 - [x] Support coupons in the URL
 
 ## Who uses it?
@@ -58,12 +59,15 @@ _👋 Want to be listed there? [Contact me](mailto:vince@lyser.io)._
 
 - `req.user` must contain a valid user object
 
-- In your Mongoose model, your users must have a `stripe` object:
+- In your Mongoose model, your users should have a `plan` attribute (if you offer plans) and a `stripe` object:
+
 ```
 let UserSchema = {
 	...
+	plan: String,
 	stripe: {
 		subscriptionId: String,
+		subscriptionStatus: String,
 		customerId: String,
 		subscriptionItems: []
 	}
@@ -91,17 +95,18 @@ app.use('/billing', require('express-billing-page')({
 	mongoUser: db.User, // A direct access to your Mongoose database User
 	secretKey: "sk_live_xxxxxxxxxxxxxxxxxxxxxxx",
 	publicKey: "pk_live_xxxxxxxxxxxxxxxxxxxxxxx",
-	upgradable: true, // Will offer a popup to upgrade plans
+	upgradable: true, // If you offer a product based on plans, will offer a popup to upgrade plans
 	accountPath: '/account', // So the redirects don't fail
 	sendMail: (subject, text, email) => {
 		// Send a mail with the library of your choice
-		// For upgrades, card changes, etc...
+		// For upgrades and cancellations emails
 	},
-	onUpgrade: (user) => {
-		// Called when user upgraded
-	},
-	onCancel: () => {
-		// Called when user cancelled his subscription (or failed to pay)
+	onSubscriptionChange: (user) => {
+		// Called when the subscription of an user changed
+		// When he upgrades, cancels, or finishes trial
+
+		console.log('Subscription status: ' + user.stripe.subscriptionStatus)
+		console.log('The user is on this plan: ' + user.plan)
 	},
 	plans: [{
 		name: 'Hobby',
