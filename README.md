@@ -1,4 +1,5 @@
-# express-billing-page
+# express-billing-block
+[![npm version](https://badge.fury.io/js/express-billing-block.svg)](https://badge.fury.io/js/express-billing-block)
 
 An Express (4.0+) middleware for rendering billing pages to your users, directly connected to Stripe.
 
@@ -85,13 +86,13 @@ let UserSchema = {
 Install the library
 
 ```bash
-npm install express-billing-page
+npm install express-billing-block
 ```
 
 Server code:
 
 ```javascript
-app.use('/billing', require('express-billing-page')({
+app.use('/billing', require('express-billing-block')({
 	mongoUser: db.User, // A direct access to your Mongoose database User
 	secretKey: "sk_live_xxxxxxxxxxxxxxxxxxxxxxx",
 	publicKey: "pk_live_xxxxxxxxxxxxxxxxxxxxxxx",
@@ -129,7 +130,6 @@ app.use('/billing', require('express-billing-page')({
 
 Simple client code example (**jQuery & bootstrap.js are required**):
 
-.
 
 ```html
 <h1>Your subscription</h1>

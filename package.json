@@ -1,12 +1,12 @@
 {
-  "name": "express-billing-page",
+  "name": "express-billing-block",
   "version": "2.0.0",
-  "description": "A Stripe billing page middleware for Express.",
+  "description": "Stripe billing middleware for Express.",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "Vincent Loewert",
+  "author": "vincelwt",
   "license": "MIT",
   "dependencies": {
     "ejs": "^2.6.2",
