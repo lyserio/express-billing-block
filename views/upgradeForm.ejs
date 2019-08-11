@@ -31,7 +31,7 @@
 		Your account plan was successfully updated :)
 	</div>
 	
-	<div class="card-deck justify-content-center flex-column flex-md-row mb-3">
+	<div class="card-deck align-content-center justify-content-center flex-column flex-md-row my-4">
 
 		<% for (let plan of upgradablePlans) { %>
 			<div data-trial='<%= plan.trial || 0 %>' data-name='<%= plan.name %>' data-plan='<%= plan.id %>' class="card card-pricing text-center px-3 mb-4"> <!-- add 'popular shadow' classes to select -->
@@ -72,7 +72,7 @@
 	<input type="hidden" name="upgradePlan" value="free">
 
 	<div class="row align-items-center justify-content-between m-auto">
-		<div class='col-md-auto text-left'>
+		<div class='my-3 col-md-6 text-left'>
 
 			<span id='couponDescription'></span>
 			<input type='hidden' name='coupon' id='coupon' />
@@ -103,7 +103,7 @@
 
 		</div>
 
-		<div class="col-md-auto">
+		<div class="my-3  col-md-auto">
 			<button type="submit" class="btn btn-primary">
 				<span style='display:none' class="spinner-border spinner-border-sm" role="status"></span>
 				<span>Continue <span id='planName'></span> →</span>
