@@ -52,7 +52,7 @@
 				<div class="d-flex flex-column justify-content-between card-body pt-0">
 					<div>
 						<ul class="list-unstyled mb-4">
-							<% for (let gig of (plan.advantages || plan.perks).filter(p => !p.minor)) { %>
+							<% for (let gig of (plan.advantages || plan.perks || plan.features).filter(p => !p.minor)) { %>
 								<li><%= gig.title %></li>
 							<% } %>
 						</ul>

@@ -118,13 +118,11 @@ We hope to see you back soon!`, user.email)
 
 const billingInfos = async (customerId, user, context, getInvoices=true) => {
 
-	// All the plans except the one we currently are (and the free plan)
-	options.plans = options.plans || []
-	
+
 	let userPlan = options.plans.find(p => p.id === user.plan)
 	
-
 	if (context === 'choosepage') {
+		// All the plans except the one we currently are (and the free plan)
 		var upgradablePlans = options.plans.filter(p => options.allowNoUpgrade ? true : p.id !== user.plan)
 	} else {
 		// In this case it's for the upgrade modal 
@@ -506,6 +504,7 @@ module.exports = (opts) => {
 	if (opts) options = opts
 
 	sendMail = options.sendMail || function () {}
+	options.plans = options.plans || []
 	
 	options.accountPath = options.accountPath || '/account#billing'
 
