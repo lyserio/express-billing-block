@@ -373,6 +373,12 @@ router.post('/upgrade', asyncHandler(async (req, res, next) => {
 	// So the user can start using the app ASAP
 	user.plan = planId
 	user.stripe.subscriptionId = subscription.id
+	user.stripe.subscriptionItems = subscription.items.data.map(i => {
+		return { 
+			plan: i.plan.id, 
+			id: i.id 
+		}
+	})
 
 	await user.save()
 
