@@ -1,6 +1,6 @@
 {
   "name": "express-billing-block",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "description": "Stripe billing middleware for Express.",
   "main": "index.js",
   "scripts": {

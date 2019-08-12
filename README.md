@@ -98,6 +98,7 @@ app.use('/billing', require('express-billing-block')({
 	publicKey: "pk_live_xxxxxxxxxxxxxxxxxxxxxxx",
 	upgradable: true, // If you offer a product based on plans, will offer a popup to upgrade plans
 	accountPath: '/account', // So the redirects don't fail
+	allowNoUpgrade: true, // Allow to stay on the free plan
 	sendMail: (subject, text, email) => {
 		// Send a mail with the library of your choice
 		// For upgrades and cancellations emails

@@ -116,13 +116,28 @@ We hope to see you back soon!`, user.email)
 	res.send({ received: true })
 }))
 
-const billingInfos = async (customerId, user, getInvoices=true) => {
+const billingInfos = async (customerId, user, context, getInvoices=true) => {
+
+	// All the plans except the one we currently are (and the free plan)
+	options.plans = options.plans || []
+	
+	let userPlan = options.plans.find(p => p.id === user.plan)
+	
+
+	if (context === 'choosepage') {
+		var upgradablePlans = options.plans.filter(p => options.allowNoUpgrade ? true : p.id !== user.plan)
+	} else {
+		// In this case it's for the upgrade modal 
+		// Which means we don't show the free plan or even the current plan
+		var upgradablePlans = options.plans.filter(p => p.id !== 'free' && p.id !== user.plan)
+	}
 
 	if (!customerId) {
 		return {
 			paymentMethods: [],
 			invoices: [],
-			upgradablePlans: options.plans,
+			upgradablePlans: upgradablePlans,
+			userPlan: userPlan,
 			subscriptions: [],
 			user: user,
 			options: options
@@ -200,10 +215,6 @@ const billingInfos = async (customerId, user, getInvoices=true) => {
 
 	}
 
-	// All the plans except the one we currently are (and the free plan)
-	let upgradablePlans = (options.plans || []).filter(p => p.id !== 'free')
-	let userPlan = (options.plans || []).find(p => p.id === user.plan)
-	
 	return {
 		paymentMethods: paymentMethods,
 		upgradablePlans: upgradablePlans,
@@ -447,7 +458,7 @@ router.get('/chooseplan', asyncHandler(async (req, res, next) => {
 
 	const customerId = res.locals.customerId
 
-	let data = await billingInfos(customerId, req.user, false)
+	let data = await billingInfos(customerId, req.user, "choosepage", false)
 
 	data.redirect = options.choosePlanRedirect
 
