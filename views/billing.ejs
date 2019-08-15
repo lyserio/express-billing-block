@@ -16,7 +16,13 @@
 
 		<% for (let sub of subscriptions.filter(sub => sub.plan)) { %>
 
-			<p>Your <b><%= options.plans.find(p => p.stripeId === sub.plan.id) ? options.plans.find(p => p.stripeId === sub.plan.id).name : '' %></b> plan is set to <b><%= sub.plan.amount %> per <%= sub.plan.interval_count !== 1 ? sub.plan.interval_count : '' %> <%= sub.plan.interval %></b> and will <%= sub.status === 'trialing' ? 'start' : 'renew' %> <b><%= sub.currentPeriodEnd %></b>.</p>
+			<p>Your <b><%= sub.name %></b> plan
+			
+			<% if (sub.plan.usage_type !== 'metered') { %>
+			 is set to <b><%= sub.plan.amount %> per <%= sub.plan.interval_count !== 1 ? sub.plan.interval_count : '' %> <%= sub.plan.interval %></b> and
+			<% } %>
+
+			will <%= sub.status === 'trialing' ? 'start' : 'renew' %> <b><%= sub.currentPeriodEnd %></b>.</p>
 
 			<p><small><%= sub.discountDescription ? 'Applied coupon ' + sub.discountDescription : '' %></small></p>
 
@@ -24,7 +30,7 @@
 
 	<% } %>
 
-	<% if (options.upgradable) { %> 
+	<% if (userPlan && options.upgradable) { %> 
 		<% if (upgradablePlans.find(p => p.order > userPlan.order) ) { %>
 			<button type="button" class="btn btn-sm btn-outline-success" data-toggle="modal" data-target="#upgradeModal">Upgrade your plan 🚀</button>
 		<% } else if (upgradablePlans.find(p => p.order < userPlan.order)) { %>

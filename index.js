@@ -142,7 +142,7 @@ const billingInfos = async (customerId, user, context, getInvoices=true) => {
 		}
 	}
 
-	let stripeCustomer = await stripe.customers.retrieve(customerId)
+	let stripeCustomer = await stripe.customers.retrieve(customerId, {expand: ['subscriptions.data.plan.product']})
 	let paymentMethods = await stripe.paymentMethods.list({ customer: customerId, type: 'card' })
 
 	let subscriptions = stripeCustomer.subscriptions.data
@@ -166,6 +166,9 @@ const billingInfos = async (customerId, user, context, getInvoices=true) => {
 				style: 'currency', 
 				currency: 'USD'
 			})
+
+			sub.unitLabel = sub.plan.product.unit_label
+			sub.name = sub.plan.product.name
 		}
 
 		if (sub.discount && sub.discount.coupon) {
