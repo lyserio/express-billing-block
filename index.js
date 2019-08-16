@@ -52,7 +52,7 @@ router.post('/webhook', asyncHandler(async (req, res, next) => {
 			
 			let user = await options.mongoUser.findOne({ 'stripe.customerId': customerId }).exec()
 
-			if (options.onUpgrade && typeof options.onUpgrade === 'function') options.onUpgrade(user, plan.id)
+			if (options.onUpgrade && typeof options.onUpgrade === 'function') options.onUpgrade(user, planId)
 
 			sendMail("Thank you for upgrading", 
 `Hello,\n
