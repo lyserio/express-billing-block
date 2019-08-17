@@ -46,6 +46,7 @@ router.post('/webhook', asyncHandler(async (req, res, next) => {
 
 		const subscription 		= await stripe.subscriptions.retrieve(subscriptionId)
 		const planId 			= subscription.metadata.planId
+		const plan 				= options.plans.find(p => p.id === planId)
 
 		// Only triggers on upgrading or creating subscription
 		if (reason === 'subscription_create' || reason === 'subscription_update') {
