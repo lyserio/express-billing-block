@@ -386,9 +386,7 @@ router.post('/upgrade', asyncHandler(async (req, res, next) => {
 
 	await user.save()
 
-	// if (subscription.status === 'incomplete') {
 	// That means it requires SCA auth
-
 	// Depending if on-session or off-session
 	// Either waiting for Card saving confirmation or direct Payment confirmation
 	if (subscription.pending_setup_intent) {
@@ -404,14 +402,13 @@ router.post('/upgrade', asyncHandler(async (req, res, next) => {
 	} else if (subscription.status === 'incomplete') {
 	
 		return next("We couldn't complete the transaction.")
-	
 	}
 
 	// Means user need to do SCA/3DSecure shit to complete payment
 	// "requires_source_action" and "requires_source" are deprecated, only for old API versions
 
 	// Nothing to do anymore
-	if (!intent) return res.send({})
+	if (!intent || intent.status === 'succeeded') return res.send({})
 
 	if (['requires_action', 'requires_source_action'].includes(intent.status)) {
 
@@ -422,7 +419,6 @@ router.post('/upgrade', asyncHandler(async (req, res, next) => {
 	} else if (['requires_payment_method', 'requires_source'].includes(intent.status)) {
 		
 		return next('Please try with another card.')
-
 	} 
 
 	next('Unknown error with your subscription. Please try with another card.')
