@@ -38,7 +38,7 @@ function findGetParameter(parameterName) {
 }
 
 
-var coupon = findGetParameter('coupon')
+let coupon = findGetParameter('coupon')
 if (coupon) {
 	console.log('Coupon detected: '+coupon)
 
@@ -66,7 +66,7 @@ if (coupon) {
 
 <% if (upgradablePlans.filter(p => p.id !== user.plan).length) { %>
 
-	let firstSelect = '<%= upgradablePlans[0].id %>';
+	let firstSelect = '<%= upgradePlans.find(p => p.default).id || upgradablePlans[0].id %>';
 	choosePlan(firstSelect)
 
 	function successUpgrading() {
@@ -86,12 +86,12 @@ if (coupon) {
 			token: token,
 			upgradePlan: plan,
 			coupon: coupon
-		}, function(data) {
+		}, (data) => {
 
 			// If SCA not needed
 			if (!data.actionRequired) return successUpgrading()
 				
-			stripe[data.actionRequired](data.clientSecret).then(function(result) {
+			stripe[data.actionRequired](data.clientSecret).then((result) => {
 
 				if (result.error) {
 					$('#upgradeForm button .spinner-border').hide()

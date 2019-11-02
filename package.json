@@ -1,17 +1,17 @@
 {
   "name": "express-billing-block",
-  "version": "2.2.6",
+  "version": "2.2.7",
   "description": "Stripe billing middleware for Express.",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "vincelwt",
+  "author": "Lyser.io",
   "license": "MIT",
   "dependencies": {
-    "ejs": "^2.6.2",
+    "ejs": "^2.7.1",
     "express": "^4.17.1",
     "moment": "^2.24.0",
-    "stripe": "^7.6.1"
+    "stripe": "^7.11.0"
   }
 }
