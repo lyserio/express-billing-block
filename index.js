@@ -121,14 +121,22 @@ const billingInfos = async (customerId, user, context, getInvoices=true) => {
 
 
 	let userPlan = options.plans.find(p => p.id === user.plan)
+	let upgradablePlans = []
 	
 	if (context === 'choosepage') {
-		// All the plans except the one we currently are (and the free plan)
-		var upgradablePlans = options.plans.filter(p => options.allowNoUpgrade ? true : p.id !== user.plan)
+		// All the plans except the one we currently are (usually the free plan)
+		upgradablePlans = options.plans.filter(p => options.allowNoUpgrade ? true : p.id !== user.plan)
 	} else {
 		// In this case it's for the upgrade modal 
 		// Which means we don't show the free plan or even the current plan
-		var upgradablePlans = options.plans.filter(p => p.id !== 'free' && p.id !== user.plan)
+		upgradablePlans = options.plans.filter(p => p.id !== 'free' && p.id !== user.plan)
+	}
+
+	if (userPlan) {
+		for (let plan of upgradablePlans) {
+			if (plan.order > userPlan.order) plan.isHigher = true
+			else if (plan.order < userPlan.order) plan.isLower = true
+		}
 	}
 
 	if (!customerId) {
@@ -342,36 +350,42 @@ router.post('/upgrade', asyncHandler(async (req, res, next) => {
 		coupon = couponCode
 	}
 
-	if (subscriptionId) {
+	try {
 
-		// https://stripe.com/docs/billing/subscriptions/upgrading-downgrading
+		if (subscriptionId) {
 
-		var subscription = await stripe.subscriptions.retrieve(subscriptionId)
-		subscription = await stripe.subscriptions.update(subscriptionId, {
-			coupon: coupon || undefined,
-			items: [{
-				id: subscription.items.data[0].id,
-				plan: plan.stripeId,
-			}],
-			expand: ['latest_invoice.payment_intent'],
-			metadata: {
-				planId: planId
-			}
-		})
+			// https://stripe.com/docs/billing/subscriptions/upgrading-downgrading
 
-	} else {
+			var subscription = await stripe.subscriptions.retrieve(subscriptionId)
+			subscription = await stripe.subscriptions.update(subscriptionId, {
+				coupon: coupon || undefined,
+				items: [{
+					id: subscription.items.data[0].id,
+					plan: plan.stripeId,
+				}],
+				expand: ['latest_invoice.payment_intent'],
+				metadata: {
+					planId: planId
+				}
+			})
 
-		var subscription = await stripe.subscriptions.create({
-								coupon: coupon || undefined,
-								customer: customerId,
-								trial_from_plan: true,
-								payment_behavior: 'allow_incomplete',  // For legacy API versions
-								items: [{ plan: plan.stripeId }],
-								expand: ['latest_invoice.payment_intent'],
-								metadata: {
-									planId: planId
-								}
-							})
+		} else {
+
+			var subscription = await stripe.subscriptions.create({
+									coupon: coupon || undefined,
+									customer: customerId,
+									trial_from_plan: true,
+									payment_behavior: 'allow_incomplete',  // For legacy API versions
+									items: [{ plan: plan.stripeId }],
+									expand: ['latest_invoice.payment_intent'],
+									metadata: {
+										planId: planId
+									}
+								})
+		}
+	} catch(e) {
+		console.error(e)
+		return next("Error subscribing you to the corrrect plan. Please contact support.")
 	}
 
 	// So the user can start using the app ASAP

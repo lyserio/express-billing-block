@@ -31,25 +31,27 @@
 	<% } %>
 
 	<% if (userPlan && options.upgradable) { %> 
-		<% if (upgradablePlans.find(p => p.order > userPlan.order) ) { %>
-			<button type="button" class="btn btn-sm btn-outline-success" data-toggle="modal" data-target="#upgradeModal">Upgrade your plan 🚀</button>
-		<% } else if (upgradablePlans.find(p => p.order < userPlan.order)) { %>
-			<button type="button" class="btn btn-sm btn-outline-warning" data-toggle="modal" data-target="#upgradeModal">Change your plan</button>
+
+		<% if (upgradablePlans.find(p => p.isHigher) ) { %>
+			<p><button type="button" class="btn btn-sm btn-outline-success" data-toggle="modal" data-target="#upgradeModal">Upgrade your plan 🚀</button></p>
+		<% } %>
+
+		<% if (upgradablePlans.find(p => p.isLower)) { %>
+			<p><small><a href='#' data-toggle="modal" data-target="#upgradeModal">Downgrade your plan</a></small></p>
 		<% } %>
-		<br>
+	
 	<% } %>
 
-	
+
 <% } else if (options.upgradable) { %>
+
 	<button type="button" class="btn btn-outline-success" data-toggle="modal" data-target="#upgradeModal">Upgrade your plan 🚀</button>
 	<br>
+
 <% } %>
 
-<br>
-
-
 <% if (paymentMethods.length) { %> 
-	<p><b>Payment method</b></p>
+	<p class="pt-3"><b>Payment method</b></p>
 	
 	<button type="button" class="btn btn-sm btn-primary" data-toggle="modal" data-target="#cardModal">+ Add a new card</button>
 
@@ -213,9 +215,15 @@
 		<div class="modal-content">
 
 			<div class="modal-header">
-				
-				<h5 class="modal-title">Upgrade your account</h5>
-				
+
+				<% if (upgradablePlans.find(p => p.isHigher) && upgradablePlans.find(p => p.isLower)) { %>
+				<h5 class="modal-title">Update your plan</h5>
+				<% } else if (upgradablePlans.find(p => p.isHigher)) { %>
+					<h5 class="modal-title">Upgrade your account</h5>
+				<% } else { %>
+					<h5 class="modal-title">Downgrade your account</h5>
+				<% } %>
+
 				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
 					<span aria-hidden="true">&times;</span>
 				</button>
@@ -227,7 +235,6 @@
 					<% include upgradeForm.ejs %>
 				</div>
 			</div>
-
 		</div>
 	</div>
 </div>
