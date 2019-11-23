@@ -1,21 +1,25 @@
 // For the upgrade modal 
 // when you click on a plan
 function choosePlan(plan) {
-	$('[data-plan]').removeClass(['shadow', 'popular'])
-	$('[data-plan="'+plan+'"]').addClass(['shadow', 'popular'])
+	$('[data-plan]').removeClass('active')
+	$('[data-plan="'+plan+'"]').addClass('active')
 	$('[data-plan] button').removeClass(['btn-primary', 'btn-outline-primary'])
 	$('[data-plan]:not([data-plan="'+plan+'"]) button').addClass('btn-outline-primary')
 	$('[data-plan="'+plan+'"] button').addClass('btn-primary')
 	$('#upgradeForm [name="upgradePlan"]').val(plan)
 	
-	if (plan === 'free') $('#cardStuff').hide()
-	else $('#cardStuff').show()
+	if (plan === 'free') $('.cardStuff').hide()
+	else $('.cardStuff').show()
 	
-	let trial = parseInt($('[data-plan="'+plan+'"]').attr('data-trial'))
-	let name = $('[data-plan="'+plan+'"]').attr('data-name')
-	
-	if (trial) $('#trialWarning').show()
-	else $('#trialWarning').hide()
+	const trial = parseInt($('[data-plan="'+plan+'"]').attr('data-trial'))
+	const name = $('[data-plan="'+plan+'"]').attr('data-name')
+
+	if (trial) {
+		$('.trialDuration').text(trial)
+		$('.trialWarning').show()
+	} else { 
+		$('.trialWarning').hide()
+	}
 
 	$('#planName').text('to ' + name)
 }
@@ -40,15 +44,6 @@ const defaultPlan = findGetParameter('plan')
 const upgradablePlans = <%- JSON.stringify(upgradablePlans) %>;
 
 if (upgradablePlans.length) {
-	// let selectedPlan = null
-	// if (defaultPlan) {
-	// 	selectedPlan = upgradablePlans.find(p => p.id === defaultPlan)
-	// }
-
-	// if (!selectedPlan) {
-	// 	if (user.)
-
-	// }
 
 	const selectedPlan = (defaultPlan ? upgradablePlans.find(p => p.id === defaultPlan) : null) ||
 						upgradablePlans.find(p => p.isHigher) ||

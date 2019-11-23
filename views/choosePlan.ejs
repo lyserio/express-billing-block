@@ -5,41 +5,48 @@
 	<link rel="icon" type="image/png" href="/favicon.png" />
 	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
 	<link rel="stylesheet" type="text/css" href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css">
-	<!--<link rel="stylesheet" type="text/css" href="https://use.fontawesome.com/releases/v5.6.3/css/all.css"  media="none" onload="if(media!='all')media='all'">-->
+
 	<style>
-		:root {
-			--input-padding-x: 1rem;
-			--input-padding-y: .75rem;
-		}
+		html,
 		body {
-			height: 100%;
+			min-height: 100%;
 		}
 
-		.card-pricing.popular {
-			z-index: 1;
-			border: 3px solid #007bff;
+		.container {
+			text-align: center;
+			padding: 4rem 0;
+			width: 1200px;
+			max-width: 90%;
 		}
 
-		.card-pricing .list-unstyled li {
-			padding: .4rem 0;
-			color: #6c757d;
+		.subtitle {
+			font-size: 1.3rem;
+			max-width: 900px;
+			margin: auto;
 		}
+
 	</style>
+	
+	<%- options.pages.customHeadHtml || '' %>
+
 </head>
 <body>
-	<div class="container py-4 text-center">
+	<div class="container">
 		<% if (options.logoUrl) { %>
 			<img src='<%= options.logoUrl %>' width='60'/>
 		<% } %>
 
-		<h2 class="py-4">Select a plan</h2>
-		
-		<div id='errorAlert' style='display: none' class="alert alert-danger" role="alert"></div>
+		<h2 class="title"><%= title %></h2>
+
+		<% if (locals.subtitle) { %>
+			<p class="subtitle"><%- subtitle %></p>
+		<% } %>
+		<br>
 
 		<% include upgradeForm.ejs %>
 	</div>
 
-	<%- options.choosePlanFooter || '' %>
+	<%- options.pages.customFooterHtml || '' %>
 
 	<script src='https://code.jquery.com/jquery-3.3.1.min.js'></script>
 	<script src="https://js.stripe.com/v3/"></script>
@@ -52,7 +59,8 @@
 			base: {
 				lineHeight: '1.5',
 				fontSmoothing: 'antialiased',
-				fontSize: '16px'
+				fontSize: '18px',
+				background: "#46D787"
 			},
 			invalid: {
 				color: '#fa755a',

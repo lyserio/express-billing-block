@@ -481,7 +481,13 @@ router.get('/chooseplan', asyncHandler(async (req, res, next) => {
 
 	data.redirect = options.choosePlanRedirect
 
-	res.render(__dirname + '/views/choosePlan', data)
+	const pageOptions = options.pages && options.pages.choosePlan ? options.pages.choosePlan : {}
+
+	res.render(__dirname + '/views/choosePlan', {
+		subtitle: pageOptions.subtitle,
+		title: pageOptions.title || "Select a plan",
+		...data
+	})
 }))
 
 
