@@ -483,7 +483,7 @@ router.get('/chooseplan', asyncHandler(async (req, res, next) => {
 
 	const pageOptions = options.pages && options.pages.choosePlan ? options.pages.choosePlan : {}
 
-	if (req.user) {
+	if (customerId) {
 		data.subtitle = pageOptions.loggedSubtitle
 		data.title = pageOptions.loggedTitle || "Select a plan"
 	} else {
