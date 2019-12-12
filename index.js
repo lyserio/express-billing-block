@@ -483,18 +483,15 @@ router.get('/chooseplan', asyncHandler(async (req, res, next) => {
 
 	const pageOptions = options.pages && options.pages.choosePlan ? options.pages.choosePlan : {}
 
-
-	let options = data
-
 	if (req.user) {
-		options.subtitle = pageOptions.loggedSubtitle
-		options.title = pageOptions.loggedTitle || "Select a plan"
+		data.subtitle = pageOptions.loggedSubtitle
+		data.title = pageOptions.loggedTitle || "Select a plan"
 	} else {
-		options.subtitle = pageOptions.subtitle
-		options.title = pageOptions.title || "Select a plan"
+		data.subtitle = pageOptions.subtitle
+		data.title = pageOptions.title || "Select a plan"
 	}
 
-	res.render(__dirname + '/views/choosePlan', options)
+	res.render(__dirname + '/views/choosePlan', data)
 }))
 
 
