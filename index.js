@@ -234,7 +234,6 @@ const billingInfos = async (customerId, user, context, getInvoices=true) => {
 		user: user,
 		options: options
 	}
-
 }
 
 router.use((req, res, next) => {
@@ -325,7 +324,7 @@ router.post('/upgrade', asyncHandler(async (req, res, next) => {
 
 	// These two are most probably undefined 
 	const subscriptionId = res.locals.subscriptionId
-	let customerId 	= res.locals.customerId
+	let customerId 		 = res.locals.customerId
 
 	if (!customerId && !token) return next("Sorry! We need a credit card to subscribe you.")
 
@@ -481,7 +480,7 @@ router.get('/chooseplan', asyncHandler(async (req, res, next) => {
 
 	data.redirect = options.choosePlanRedirect
 
-	const pageOptions = options.pages && options.pages.choosePlan ? options.pages.choosePlan : {}
+	const pageOptions = options.pages.choosePlan ? options.pages.choosePlan : {}
 
 	if (customerId) {
 		data.subtitle = pageOptions.loggedSubtitle
@@ -534,8 +533,11 @@ router.get('/billing.js', (req, res, next) => {
 module.exports = (opts) => {
 	if (opts) options = opts
 
+	if (!options.mongoUser) throw new Error('Missing parameter mongoUser (a mongoose collection of your users)')
+
 	sendMail = options.sendMail || function () {}
 	options.plans = options.plans || []
+	options.pages = options.pages || {}
 	
 	options.accountPath = options.accountPath || '/account#billing'
 
