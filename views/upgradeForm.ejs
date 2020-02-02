@@ -8,14 +8,23 @@
 
 	#upgradeForm .plan {
 		width: 300px;
+		position: relative;
+		cursor: pointer;
 		max-width: 90%;
 		display: flex;
 		flex-direction: column;
 		margin: 1rem;
-		padding: 1rem 2rem;
+		padding: 1rem 1rem;
 		border: 1px solid rgba(0,0,0,0.1);
 		border-radius: .25rem;
 		box-sizing: border-box;
+	}
+
+	#upgradeForm input[type="radio"] {
+		position: absolute;
+		top: 20px;
+		left: 20px;
+		transform: scale3d(1.2, 1.2, 1);
 	}
 
 	#upgradeForm .plan.active {
@@ -37,11 +46,6 @@
 		opacity: 0.7;
 	}
 
-	#upgradeForm .card-element {
-		max-width: 600px;
-		margin: 2rem auto;
-	}
-
 	#upgradeForm .planTitle {
 		font-size: 1.5rem;
 		margin-bottom: 2rem;
@@ -60,21 +64,21 @@
 	#upgradeForm .perks {
 		list-style: none;
 		padding: .4rem 0;
+		margin-bottom: 0;
 		color: #6c757d;
 	}
 
 	#upgradeForm .perks li {
 		padding: .4rem 0;
-		font-size: 1.1rem;
 	}
 
-	#upgradeForm .price {
+	#upgradeForm .plan .price {
 		color: #007bff;
-		font-size: 2rem;
+		font-size: 1.7rem;
 		margin-top: 1rem;
 	}
 
-	#upgradeForm .price span {
+	#upgradeForm .plan .price span {
 		margin-left: 5px;
 		color: #6c757d;
 		font-size: 1rem;
@@ -88,16 +92,21 @@
 	#upgradeSuccess {
 		display: none;
 	}
+
+	#upgradeForm .cardStuff {
+		max-width: 600px;
+		margin: auto;
+	}
+
+	#upgradeForm .cardRow {
+		text-align: left;
+		margin: 2rem auto;
+	}
 </style>
 
 <form id='upgradeForm'>
+	
 
-	<div id='errorAlert' style='display: none' class="alert alert-danger" role="alert"></div>
-	
-	<div id='upgradeSuccess' class="alert alert-success" role="alert">
-		Your account was successfully updated
-	</div>
-	
 	<div class="cardContainer flex-column align-items-md-stretch align-items-center flex-md-row">
 
 		<% for (let plan of upgradablePlans) { %>
@@ -107,13 +116,19 @@
 
 					<% if (plan.id === user.plan) { %>(current)<% } %>
 				</span> -->
+				<input type="radio" name="upgradePlan" value="<%= plan.id %>">
 
 				<div class="planHeader">
+
 					<h3 class="planTitle"><%= plan.name %></h3>
+
+					<% if (plan.id === user.plan) { %>
+						<p><span class="badge badge-success">current plan</span></p>
+					<% } %> 
 
 					<h1 class="price" data-pricing-value="<%= plan.price %>">
 						$<%= plan.price %>
-						<span>/ per month</span>
+						<span>/ month</span>
 					</h1>
 				</div>
 
@@ -123,17 +138,6 @@
 							<li><%= gig.title %></li>
 						<% } %>
 					</ul>
-
-
-					<div class="pt-3">
-						<% if (plan.id === user.plan) { %>
-							<p><small class="my-3 text-success">This is your current plan.</small></p>
-						<% } %> 
-
-						<% if (upgradablePlans.filter(p => p.id !== plan.id).length) { %>
-							<button type="button" class="btn btn-outline-primary mb-3">Select</button>
-						<% } %>
-					</div>
 				</div>
 
 			</div>
@@ -141,36 +145,51 @@
 
 	</div>
 
-	<input type="hidden" name="upgradePlan" value="free">
-
 	<p><span id='couponDescription'></span></p>
 	<input type='hidden' name='coupon' id='coupon' />
 
 	<div class='cardStuff'>
 
-		<% if (subscriptions.length) { %>
-			
-			<p><small>Your existing subscription will be adjusted to the new amount.</small></p>
-		
-		<% } else { %>
+		<div class='hint alert alert-info'>
 
-			<p>Select a plan <span class='trialWarning'>• <span class="trialDuration">30</span> day risk free trial</span> • Cancel any time</p>
-		
-			<p><small class='trialWarning'>Billing will start at the end of the trial period if you haven't canceled.</small></p>
-		
-		<% } %>
+			<% if (subscriptions.length) { %>
+				
+				<small>Your existing subscription will be adjusted to the new amount.</small>
+			
+			<% } else { %>
+
+				<span class='trialWarning'><span class="trialDuration">30</span> day risk free trial •</span> You can cancel any time from your dashboard.
+			
+			<% } %>
+
+		</div>
 
 		<% if (!paymentMethods.length) { %>
-			<div class='card-element form-control'></div>
-		<% } else { %>
-			<div class='mt-3 card-errors error text-danger' role="alert"></div>
+			<div class='row cardRow'>
+				<div class='col-6'>
+					<label>Card number</label>
+					<div class='cardNumber form-control'></div>
+				</div>
+				<div class='col-3'>
+					<label>Expiry</label>
+					<div class='cardExpiry form-control'></div>
+				</div>
+				<div class='col-3'>
+					<label>Security code</label>
+					<div class='cardCvc form-control'></div>
+				</div>
+			</div>
 		<% } %>
+
+		<div class='mt-3 error text-danger' role="alert"></div>
+
+		<div class="mt-3 success text-success" role="alert"></div>
 
 	</div>
 
-	<button type="submit" class="btn btn-primary">
+	<button type="submit" class="submit btn btn-primary">
 		<span style='display:none' class="spinner-border spinner-border-sm" role="status"></span>
-		<span>Continue <span id='planName'></span> →</span>
+		<span class='text'>Continue</span></span> →
 	</button>
 
 	<% if (!paymentMethods.length) { %>

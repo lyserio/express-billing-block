@@ -6,7 +6,8 @@ function choosePlan(plan) {
 	$('[data-plan] button').removeClass(['btn-primary', 'btn-outline-primary'])
 	$('[data-plan]:not([data-plan="'+plan+'"]) button').addClass('btn-outline-primary')
 	$('[data-plan="'+plan+'"] button').addClass('btn-primary')
-	$('#upgradeForm [name="upgradePlan"]').val(plan)
+	
+	$('#upgradeForm [name="upgradePlan"][value="'+plan+'"]').prop('checked', true)
 	
 	if (plan === 'free') $('.cardStuff').hide()
 	else $('.cardStuff').show()
@@ -17,15 +18,15 @@ function choosePlan(plan) {
 	if (trial) {
 		$('.trialDuration').text(trial)
 		$('.trialWarning').show()
+		$('#upgradeForm .submit .text').text('Begin free trial')
 	} else { 
 		$('.trialWarning').hide()
+		$('#upgradeForm .submit .text').text('Continue with '+name)
 	}
-
-	$('#planName').text('to ' + name)
 }
 
-$('[data-plan] button').click(function() {
-	const id = $(this).parents('[data-plan]').attr('data-plan')
+$('[data-plan]').click(function() {
+	const id = $(this).attr('data-plan')
 	choosePlan(id)
 })
 
@@ -55,6 +56,37 @@ if (upgradablePlans.length) {
 	console.error('Error: there is no plan for this user to upgrade to.')
 }
 
+var elementStyles = {
+	base: {
+		color: '#fff',
+		backgroundColor: '#000',
+		fontWeight: 600,
+		fontFamily: 'Open Sans, Segoe UI, sans-serif',
+		fontSize: '16px',
+		fontSmoothing: 'antialiased',
+		':focus': {
+			color: '#424770',
+		},
+
+		'::placeholder': {
+			color: '#9BACC8',
+		},
+
+		':focus::placeholder': {
+			color: '#CFD7DF',
+		},
+	},
+	invalid: {
+		color: '#fff',
+		':focus': {
+			color: '#FA755A',
+		},
+		'::placeholder': {
+			color: '#FFCCA5',
+		}
+	}
+}
+
 // Automatic coupon detection & confirmation
 const coupon = findGetParameter('coupon')
 if (coupon) {
@@ -72,17 +104,30 @@ if (coupon) {
 
 <% if (!paymentMethods.length) { %>
 
+
 	let elements1 = stripe.elements()
-	let card1 = elements1.create('card', options)
-	card1.mount('#upgradeForm .card-element')
-	card1.addEventListener('change', (event) => {
-		 $('#upgradeForm .card-errors').text(event.error ? event.error.message : '')
-	})
+
+	// let card1 = elements1.create('card', options)
+	let cardNumber = elements1.create('cardNumber', options)
+	cardNumber.mount('#upgradeForm .cardNumber')
+
+	let cardExpiry = elements1.create('cardExpiry', options)
+	cardExpiry.mount('#upgradeForm .cardExpiry')
+
+	let cardCvc = elements1.create('cardCvc', options)
+	cardCvc.mount('#upgradeForm .cardCvc')
+
+	for (let el of [cardNumber, cardCvc, cardExpiry]) {
+		el.addEventListener('change', (event) => {
+			$('#upgradeForm .error').text(event.error ? event.error.message : '')
+		})
+	}
 
 <% } %>
 
 function successUpgrading() {
-	$('#upgradeSuccess').show()
+	$('#upgradeForm .success').show()
+	$('#upgradeForm .success').text("Successfully updated your account. Redirecting you.")
 
 	setTimeout(() => {
 		// Reload without parameters
@@ -107,7 +152,7 @@ function submitUpgrade(plan, token) {
 
 			if (result.error) {
 				$('#upgradeForm button .spinner-border').hide()
-				$('#upgradeForm .card-errors').text(result.error.message)
+				$('#upgradeForm .error').text(result.error.message)
 
 				return 
 			}
@@ -117,7 +162,7 @@ function submitUpgrade(plan, token) {
 	
 	}).fail(e => {
 		$('#upgradeForm button .spinner-border').hide()
-		$('#upgradeForm .card-errors').text(e.responseJSON.error)
+		$('#upgradeForm .error').text(e.responseJSON.error)
 		console.error(e.responseJSON)
 	})
 }
@@ -127,17 +172,17 @@ $('#upgradeForm').submit((event) => {
 	event.preventDefault()
 
 	$('#upgradeForm button .spinner-border').show()
-	$('#upgradeForm .card-errors').text("")
+	$('#upgradeForm .error').text("")
 
 	const plan = $('#upgradeForm [name="upgradePlan"]').val()
 
 	<% if (!paymentMethods.length) { %>
 	
-		stripe.createToken(card1).then((result) => {
+		stripe.createToken(cardNumber).then((result) => {
 
 			if (result.error) {
 				$('#upgradeForm button .spinner-border').hide()
-				$('#upgradeForm .card-errors').text(result.error.message)
+				$('#upgradeForm .error').text(result.error.message)
 
 				return 
 			}
