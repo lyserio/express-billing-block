@@ -123,7 +123,7 @@
 					<h3 class="planTitle"><%= plan.name %></h3>
 
 					<% if (plan.id === user.plan) { %>
-						<p><span class="badge badge-success">current plan</span></p>
+						<p><span class="badge badge-success">current</span></p>
 					<% } %> 
 
 					<h1 class="price" data-pricing-value="<%= plan.price %>">
@@ -154,11 +154,15 @@
 
 			<% if (subscriptions.length) { %>
 				
-				<small>Your existing subscription will be adjusted to the new amount.</small>
+				Your existing subscription will be adjusted to the new amount.
 			
+			<% } else if (options.pages.upgradeNotice) { %>
+
+				<%- options.pages.upgradeNotice %>
+
 			<% } else { %>
 
-				<span class='trialWarning'><span class="trialDuration">30</span> day risk free trial •</span> You can cancel any time from your dashboard.
+				<span class='trialWarning'><span class="trialDuration">30</span>-day risk-free trial •</span> Cancel any time from the dashboard
 			
 			<% } %>
 

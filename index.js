@@ -315,7 +315,6 @@ router.get('/setupintent', asyncHandler(async (req, res, next) => {
 	res.send({ clientSecret: setupIntent.client_secret })
 }))
 
-
 router.post('/upgrade', asyncHandler(async (req, res, next) => {
 
 	const token 		= req.body.token
@@ -334,14 +333,14 @@ router.post('/upgrade', asyncHandler(async (req, res, next) => {
 			customerId = await addCardToCustomer(req.user, customerId, null, token)
 		} catch(e) {
 			console.error(e)
-			return next("Sorry, we couldn't process your credit card. Please check with your bank.")
+			return next("We couldn't process your credit card. Please try another one or check with your bank.")
 		}
 	}
 
 	let user = await options.mongoUser.findById(req.user.id).exec()
 
 	const plan = options.plans.find(plan => plan.id === planId)
-	if (!plan) return next('Invalid plan.')
+	if (!plan) return next('This plan looks invalid. Contact support for help.')
 
 	// If we supplied a coupon
 	let coupon = null
@@ -438,7 +437,6 @@ router.post('/upgrade', asyncHandler(async (req, res, next) => {
 
 }))
 
-
 router.post('/card', asyncHandler(async (req, res, next) => {
 
 	const paymentMethodId = req.body.paymentMethodId
@@ -471,7 +469,6 @@ router.get('/setcarddefault', asyncHandler(async (req, res, next) => {
 	res.redirect(options.accountPath)
 }))
 
-
 router.get('/chooseplan', asyncHandler(async (req, res, next) => {
 
 	const customerId = res.locals.customerId
@@ -492,7 +489,6 @@ router.get('/chooseplan', asyncHandler(async (req, res, next) => {
 
 	res.render(__dirname + '/views/choosePlan', data)
 }))
-
 
 router.get('/cancelsubscription', asyncHandler(async (req, res, next) => {
 
@@ -517,8 +513,8 @@ router.get('/resumesubscription', asyncHandler(async (req, res, next) => {
 	let user = await options.mongoUser.findById(req.user.id).exec()
 
 	await stripe.subscriptions.update(subscriptionId, {
- 		cancel_at_period_end: false
- 	})
+		cancel_at_period_end: false
+	})
 
 	user.stripe.canceled = false
 	user.save()
