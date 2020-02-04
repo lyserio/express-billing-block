@@ -43,7 +43,7 @@
 		<% } %>
 		<br>
 
-		<% include upgradeForm.ejs %>
+		<%- include('upgradeForm.ejs') %>
 	</div>
 
 	<%- options.pages.customFooterHtml || '' %>
@@ -70,7 +70,7 @@
 			}
 		}
 
-		<% include upgrade.js.ejs %>
+		<%- include('upgrade.js.ejs') %>
 
 	</script>
 

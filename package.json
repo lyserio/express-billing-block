@@ -1,6 +1,6 @@
 {
   "name": "express-billing-block",
-  "version": "2.5.0",
+  "version": "2.5.1",
   "description": "Stripe billing middleware for Express.",
   "main": "index.js",
   "scripts": {
@@ -9,9 +9,9 @@
   "author": "Lyser.io",
   "license": "MIT",
   "dependencies": {
-    "ejs": "^2.7.4",
+    "ejs": "^3.0.1",
     "express": "^4.17.1",
     "moment": "^2.24.0",
-    "stripe": "^7.15.0"
+    "stripe": "^8.13.0"
   }
 }

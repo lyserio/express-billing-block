@@ -1,4 +1,4 @@
-let billing = {
+const billing = {
 
 	load: (selector="billingSection", callback) => {
 		$(selector).html(`
@@ -28,6 +28,7 @@ let billing = {
 			if (callback) callback()
 
 		}).fail(e => {
+			$(selector).html('<p>Error loading billing informations. Contact support for help.</p>')
 			console.error(e)
 		})
 	},
