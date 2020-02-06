@@ -1,7 +1,7 @@
 {
   "name": "express-billing-block",
-  "version": "2.5.2",
-  "description": "Stripe billing middleware for Express.",
+  "version": "2.5.3",
+  "description": "Stripe billing and subscription management for Express.",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
