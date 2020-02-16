@@ -1,3 +1,5 @@
+/* eslint-disable */
+
 const billing = {
 
 	load: (selector="billingSection", callback) => {

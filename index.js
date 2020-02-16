@@ -7,6 +7,19 @@ let stripe = null
 let options = {}
 
 const asyncHandler = fn => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next)
+const beautifyAmount = amount => (amount / 100).toLocaleString('en-US', {  style: 'currency',  currency: 'USD' })
+
+const updateSubscriptionData = async (user, subscription) => {
+	user.stripe.subscriptionId = subscription.id
+	user.stripe.subscriptionItems = subscription.items.data.map(i => {
+		return { 
+			plan: i.plan.id, 
+			id: i.id 
+		}
+	})
+
+	await user.save()
+}
 
 router.post('/webhook', asyncHandler(async (req, res, next) => {
 
@@ -81,7 +94,7 @@ Glad to have you on board :)`, user.email)
 
 		if (user.plan) {
 			if (acceptableStatus.includes(currentStatus)) {
-				 user.plan = planId
+				user.plan = planId
 			} else {
 				user.plan = 'free'
 			}
@@ -106,7 +119,7 @@ Glad to have you on board :)`, user.email)
 
 		sendMail(`Subscription canceled - ${options.siteName}`, 
 `Hello,\n
-This is an automatic email to inform that your ${options.siteName} subscription was canceled.
+We inform that your ${options.siteName} subscription was canceled.
 ${options.cancelMailExtra ? options.cancelMailExtra + '\n' : ''}
 We hope to see you back soon!`, user.email)
 
@@ -118,7 +131,6 @@ We hope to see you back soon!`, user.email)
 }))
 
 const billingInfos = async (customerId, user, context, getInvoices=true) => {
-
 
 	let userPlan = options.plans.find(p => p.id === user.plan)
 	let upgradablePlans = []
@@ -154,8 +166,6 @@ const billingInfos = async (customerId, user, context, getInvoices=true) => {
 	let stripeCustomer = await stripe.customers.retrieve(customerId, {expand: ['subscriptions.data.plan.product']})
 	let paymentMethods = await stripe.paymentMethods.list({ customer: customerId, type: 'card' })
 
-	let subscriptions = stripeCustomer.subscriptions.data
-
 	paymentMethods = paymentMethods.data.map((m) => {
 		if (m.id === stripeCustomer.invoice_settings.default_payment_method || 
 			m.id === stripeCustomer.default_source) { // default_source will be deprecated (i think)
@@ -165,16 +175,20 @@ const billingInfos = async (customerId, user, context, getInvoices=true) => {
 		return m
 	})
 
+	let subscriptions = stripeCustomer.subscriptions.data
+
+	// Make sure we are up to date (if change from Stripe dashboard size)
+	const userObj = await options.mongoUser.findById(user.id).exec()
+	await updateSubscriptionData(userObj, subscriptions[0])
+
+	// We shouldn't have multiple ones, but just in case.
 	subscriptions = subscriptions.map(sub => {
 
 		sub.currentPeriodStart = moment(sub.current_period_start * 1000).format("ll")
 		sub.currentPeriodEnd = moment(sub.current_period_end * 1000).format("ll")
 		
 		if (sub.plan) { 
-			sub.plan.amount = (sub.plan.amount / 100).toLocaleString('en-US', { 
-				style: 'currency', 
-				currency: 'USD'
-			})
+			sub.plan.amount = beautifyAmount(sub.plan.amount)
 
 			sub.unitLabel = sub.plan.product.unit_label
 			sub.name = sub.plan.product.name
@@ -208,10 +222,7 @@ const billingInfos = async (customerId, user, context, getInvoices=true) => {
 		allInvoices = allInvoices.data
 		.filter(invoice => invoice.amount_due > 0) // Only show 'real' invoices 
 		.map(invoice => {
-			invoice.amount = (invoice.amount_due / 100).toLocaleString('en-US', { 
-				style: 'currency', 
-				currency: 'USD'
-			})
+			invoice.amount = beautifyAmount(invoice.amount_due)
 
 			// Because the invoice's own period isn't correct for the first invoice, we use the one from the first item
 			invoice.cleanPeriodEnd = moment(invoice.lines.data[0].period.end * 1000).format('ll')
@@ -374,7 +385,9 @@ router.post('/upgrade', asyncHandler(async (req, res, next) => {
 									customer: customerId,
 									trial_from_plan: true,
 									payment_behavior: 'allow_incomplete',  // For legacy API versions
-									items: [{ plan: plan.stripeId }],
+									items: [{ 
+										plan: plan.stripeId 
+									}],
 									expand: ['latest_invoice.payment_intent'],
 									metadata: {
 										planId: planId
@@ -388,15 +401,7 @@ router.post('/upgrade', asyncHandler(async (req, res, next) => {
 
 	// So the user can start using the app ASAP
 	user.plan = planId
-	user.stripe.subscriptionId = subscription.id
-	user.stripe.subscriptionItems = subscription.items.data.map(i => {
-		return { 
-			plan: i.plan.id, 
-			id: i.id 
-		}
-	})
-
-	await user.save()
+	await updateSubscriptionData(user, subscription)
 
 	// That means it requires SCA auth
 	// Depending if on-session or off-session

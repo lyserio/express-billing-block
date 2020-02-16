@@ -47,11 +47,7 @@
 	}
 
 	#upgradeForm .planTitle {
-		font-size: 1.5rem;
-		margin-bottom: 2rem;
-	}
-
-	#upgradeForm .planHeader {
+		font-size: 1.3rem;
 		margin-bottom: 1rem;
 	}
 
@@ -69,17 +65,15 @@
 	}
 
 	#upgradeForm .perks li {
-		padding: .4rem 0;
+		padding: .2rem 0;
 	}
 
 	#upgradeForm .plan .price {
 		color: #007bff;
-		font-size: 1.7rem;
-		margin-top: 1rem;
+		font-size: 1.4rem;
 	}
 
 	#upgradeForm .plan .price span {
-		margin-left: 5px;
 		color: #6c757d;
 		font-size: 1rem;
 	}
@@ -87,10 +81,6 @@
 	#upgradeForm {
 		text-align: center;
 		padding: 1rem 0;
-	}
-
-	#upgradeSuccess {
-		display: none;
 	}
 
 	#upgradeForm .cardStuff {
@@ -156,9 +146,9 @@
 				
 				Your existing subscription will be adjusted to the new amount.
 			
-			<% } else if (options.pages.upgradeNotice) { %>
+			<% } else if (options.pages.choosePlan.notice) { %>
 
-				<%- options.pages.upgradeNotice %>
+				<%- options.pages.choosePlan.notice %>
 
 			<% } else { %>
 

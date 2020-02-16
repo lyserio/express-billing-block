@@ -19,10 +19,8 @@
 			max-width: 90%;
 		}
 
-		.subtitle {
-			font-size: 1.3rem;
-			max-width: 900px;
-			margin: auto;
+		.title {
+			margin-bottom: 1rem
 		}
 
 	</style>
@@ -36,10 +34,10 @@
 			<p><img src='<%= options.logoUrl %>' width='90'/></p>
 		<% } %>
 
-		<h2 class="title"><%= title %></h2>
+		<h1 class="title"><%= title %></h1>
 
 		<% if (locals.subtitle) { %>
-			<p class="subtitle"><%- subtitle %></p>
+			<p class="lead subtitle"><%- subtitle %></p>
 		<% } %>
 		<br>
 
