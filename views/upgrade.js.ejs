@@ -107,7 +107,6 @@ if (coupon) {
 
 	let elements1 = stripe.elements()
 
-	// let card1 = elements1.create('card', options)
 	let cardNumber = elements1.create('cardNumber', options)
 	cardNumber.mount('#upgradeForm .cardNumber')
 

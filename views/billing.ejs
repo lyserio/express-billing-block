@@ -50,42 +50,37 @@
 
 <% } %>
 
-<% if (paymentMethods.length) { %> 
-	<p class="pt-3"><b>Payment method</b></p>
+<h5 class="my-3">Payment method</h5>
 	
-	<button type="button" class="btn btn-sm btn-primary" data-toggle="modal" data-target="#cardModal">+ Add a new card</button>
+<button type="button" class="btn btn-sm btn-primary" data-toggle="modal" data-target="#cardModal">+ Add a new card</button>
 
-	<ul class="list-group py-3 mb-1">
-		<% for (let method of paymentMethods) { %>
-			<li class="list-group-item d-flex justify-content-between align-items-center">
+<ul class="list-group py-3 mb-1">
+	<% for (let method of paymentMethods) { %>
+		<li class="list-group-item d-flex justify-content-between align-items-center">
 
-				<span>
-					<img class='mr-2' src='https://rawcdn.githack.com/FreshVine/Payment-Methods-SVG/c441556f81b9a9950ab03d0d96b27fb1493ce22a/icons/cards/<%= method.card.brand %>.svg' width=30/>
-					 <b>···· ···· ····</b> <%= method.card.last4 %> 
-					 <span class="badge badge-<%= method.card.exp_year > new Date().getFullYear() ? 'success' : ( method.card.exp_year < new Date().getFullYear() ? 'danger' : 'warning') %>">exp <%= method.card.exp_year %></span>
-				</span>
-				
-				<% if (method.isDefault) { %>
-					<span class="badge badge-success">in use</span>
-				<% } else { %>
-					<div>
-						<a href='/billing/setcarddefault?id=<%= method.id %>' class="btn-primary btn btn-sm small">select</a>
-						<a onclick="return confirm('Are you sure you want to delete this card?');" href='/billing/removecard?id=<%= method.id %>' class="text-danger small"><span class="oi oi-trash"></span></a>
-					</div>
-				<% } %>
+			<span>
+				<img class='mr-2' src='https://rawcdn.githack.com/FreshVine/Payment-Methods-SVG/c441556f81b9a9950ab03d0d96b27fb1493ce22a/icons/cards/<%= method.card.brand %>.svg' width=30/>
+				 <b>···· ···· ····</b> <%= method.card.last4 %> 
+				 <span class="badge badge-<%= method.card.exp_year > new Date().getFullYear() ? 'success' : ( method.card.exp_year < new Date().getFullYear() ? 'danger' : 'warning') %>">exp <%= method.card.exp_year %></span>
+			</span>
+			
+			<% if (method.isDefault) { %>
+				<span class="badge badge-success">in use</span>
+			<% } else { %>
+				<div>
+					<a href='/billing/setcarddefault?id=<%= method.id %>' class="btn-primary btn btn-sm small">select</a>
+					<a onclick="return confirm('Are you sure you want to delete this card?');" href='/billing/removecard?id=<%= method.id %>' class="text-danger small"><span class="oi oi-trash"></span></a>
+				</div>
+			<% } %>
 
-			</li>
-		<% } %>
-	</ul>
-
-<% } else { %>
-	<p>No cards on record. <a href='javascript:' data-toggle="modal" data-target="#cardModal">Click to add a card</a>.</p>
-<% } %>
+		</li>
+	<% } %>
+</ul>
 
 <% if (invoices.length) { %> 
-	<p><b>Billing history</b></p>
+	<h5>Billing history</h5>
 
-	<ul class="list-group py-2">				
+	<ul class="list-group py-3">				
 		<% for (let invoice of invoices) { %>
 			<li class="list-group-item d-flex justify-content-between align-items-center">
 				<% if (invoice.status === 'draft') { %>
@@ -116,7 +111,7 @@
 	</ul>
 <% } %>
 
-<% if (options.allowCancel && subscriptions.length && !user.stripe.canceled) { %>
+<% if (1 || (options.allowCancel && subscriptions.length && !user.stripe.canceled)) { %>
 
 <p class="mt-3"><small><a class='text-danger' href='javascript:' data-toggle="modal" data-target="#cancelModal">Cancel your subscription</a></small></p>
 
@@ -134,39 +129,24 @@
 
 			</div>
 
-			<div class="modal-body">
-				<div class="container-fluid">
-					<h5>We'd be very sad to see you go :(</h5>
-					<br>
-					<p>If you decide to continue, your subscription will be canceled at the end of your current billing period at which point all privileged features will be disabled.</p>
-					<br>
+			<form action='/billing/cancelsubscription' method="post">
+				<div class="modal-body">
+					<div class="container-fluid">
+						<textarea class='mb-4 form-control' name='feedback' placeholder="Mind letting us know how we can make the product better?"></textarea>
+						<p>Your subscription will be canceled at the end of the current billing period at which point all privileged features will be disabled.</p>
+					</div>
 				</div>
-			</div>
 
-			<div class="modal-footer">
-				<a class='mr-3' href='javascript:' data-dismiss="modal" aria-label="Close">Go back</a>
-				<a href="/billing/cancelsubscription" class="btn btn-warning">
-					<span style='display:none' class="spinner-border spinner-border-sm"></span>
-					<span>Cancel my subscription</span>
-				</a>
-			</div>
+				<div class="modal-footer">
+					<a class='mr-3' href='javascript:' data-dismiss="modal" aria-label="Close">Go back</a>
+					<button type="button" class="btn btn-warning">Cancel my subscription</button>
+				</div>
+			</form>
 		</div>
 	</div>
 </div>
 
 <% } %>
-
-<style>
-
-	.card-pricing.popular {
-		z-index: 1;
-		border: 3px solid #007bff;
-	}
-	.card-pricing .list-unstyled li {
-		padding: .5rem 0;
-		color: #6c757d;
-	}
-</style>
 
 <!-- Card Modal -->
 <div class="modal fade" id="cardModal" tabindex="-2" role="dialog" aria-hidden="true">
@@ -187,8 +167,22 @@
 
 						<p><small>Credit and debit cards are supported.</small></p>
 
-						<div class='card-element mb-2 form-control'></div>
-						<div class='card-errors text-danger' role="alert"></div>
+						<div class='row mb-2'>
+							<div class='col-6'>
+								<label>Card number</label>
+								<div class='cardNumber form-control'></div>
+							</div>
+							<div class='col-3'>
+								<label>Expiry</label>
+								<div class='cardExpiry form-control'></div>
+							</div>
+							<div class='col-3'>
+								<label>CVC</label>
+								<div class='cardCvc form-control'></div>
+							</div>
+						</div>
+
+						<div class='errors text-danger' role="alert"></div>
 						
 						<div class="mt-4 d-flex justify-content-between align-items-end">
 							<small>Card stored securely with <a href='https://stripe.com'>Stripe</a></small>
@@ -214,26 +208,11 @@
 	<div style="max-width: <%= upgradablePlans.length * 400 %>px;" class="modal-dialog modal-dialog-centered" role="document">
 		<div class="modal-content">
 
-			<div class="modal-header">
-
-				<% if (upgradablePlans.find(p => p.isHigher) && upgradablePlans.find(p => p.isLower)) { %>
-				<h5 class="modal-title">Update your plan</h5>
-				<% } else if (upgradablePlans.find(p => p.isHigher)) { %>
-					<h5 class="modal-title">Upgrade your account</h5>
-				<% } else { %>
-					<h5 class="modal-title">Downgrade your account</h5>
-				<% } %>
-
+			<div class="modal-body">
 				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
 					<span aria-hidden="true">&times;</span>
 				</button>
-
-			</div>
-
-			<div class="modal-body">
-				<div class="container-fluid">
 					<%- include('upgradeForm.ejs') %>
-				</div>
 			</div>
 		</div>
 	</div>
@@ -268,11 +247,20 @@
 		/*** Second element for the adding card flow **/
 		
 		let elements2 = stripe.elements()
-		let card2 = elements2.create('card', options)
-		card2.mount('#cardForm .card-element')
-		card2.addEventListener('change', (event) => {
-			$('#cardForm .card-errors').text(event.error ? event.error.message : '')
-		})
+		let cardNumber2 = elements2.create('cardNumber', options)
+		cardNumber2.mount('#cardForm .cardNumber')
+
+		let cardExpiry2 = elements2.create('cardExpiry', options)
+		cardExpiry2.mount('#cardForm .cardExpiry')
+
+		let cardCvc2 = elements2.create('cardCvc', options)
+		cardCvc2.mount('#cardForm .cardCvc')
+
+		for (let el of [cardNumber2, cardCvc2, cardExpiry2]) {
+			el.addEventListener('change', (event) => {
+				$('#cardForm .error').text(event.error ? event.error.message : '')
+			})
+		}
 
 		$('#cardForm').submit(function(event) {
 			event.preventDefault()
@@ -281,11 +269,11 @@
 
 			$.get('/billing/setupintent', data => {
 
-				stripe.handleCardSetup(data.clientSecret, card2).then((result) => {
+				stripe.handleCardSetup(data.clientSecret, cardNumber2).then((result) => {
 
 					if (result.error) {
 						$('#cardForm button .spinner-border').hide()
-						$('#cardForm .card-errors').text(result.error.message)
+						$('#cardForm .error').text(result.error.message)
 						return 
 					}
 
@@ -304,7 +292,7 @@
 
 					}).fail(e => {
 						$('#cardForm button .spinner-border').hide()
-						$('#cardForm .card-errors').text("We couldn't add your card. Please try again or with another card.")
+						$('#cardForm .error').text("We couldn't add your card. Please try again or with another card.")
 						console.error(e)
 					})
 

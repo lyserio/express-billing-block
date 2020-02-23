@@ -177,7 +177,7 @@ const billingInfos = async (customerId, user, context, getInvoices=true) => {
 
 	let subscriptions = stripeCustomer.subscriptions.data
 
-	// Make sure we are up to date (if change from Stripe dashboard size)
+	// Make sure we are up to date (if change from Stripe dashboard)
 	const userObj = await options.mongoUser.findById(user.id).exec()
 	await updateSubscriptionData(userObj, subscriptions[0])
 
@@ -495,7 +495,7 @@ router.get('/chooseplan', asyncHandler(async (req, res, next) => {
 	res.render(__dirname + '/views/choosePlan', data)
 }))
 
-router.get('/cancelsubscription', asyncHandler(async (req, res, next) => {
+router.post('/cancelsubscription', asyncHandler(async (req, res, next) => {
 
 	let user = await options.mongoUser.findById(req.user.id).exec()
 
@@ -507,6 +507,12 @@ router.get('/cancelsubscription', asyncHandler(async (req, res, next) => {
 
  	user.stripe.canceled = true
 	user.save()
+
+	const feedback = req.body.feedback
+
+	if (feedback && feedback.length) {
+		if (options.notify) options.notify(`${user.email} gave a feedback before cancelling:<br/>${feedback}`)
+	}
 
 	res.redirect(options.accountPath)
 }))
