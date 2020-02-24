@@ -10,13 +10,20 @@ const asyncHandler = fn => (req, res, next) => Promise.resolve(fn(req, res, next
 const beautifyAmount = amount => (amount / 100).toLocaleString('en-US', {  style: 'currency',  currency: 'USD' })
 
 const updateSubscriptionData = async (user, subscription) => {
-	user.stripe.subscriptionId = subscription.id
-	user.stripe.subscriptionItems = subscription.items.data.map(i => {
-		return { 
-			plan: i.plan.id, 
-			id: i.id 
-		}
-	})
+
+	if (subscription) {
+		user.stripe.subscriptionId = subscription.id
+		user.stripe.subscriptionItems = subscription.items.data.map(i => {
+			return { 
+				plan: i.plan.id, 
+				id: i.id 
+			}
+		})
+	} else {
+		user.stripe.subscriptionId = null
+		user.stripe.subscriptionItems = []
+		user.plan = 'free'
+	}
 
 	await user.save()
 }
