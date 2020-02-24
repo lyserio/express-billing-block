@@ -49,32 +49,24 @@ router.post('/webhook', asyncHandler(async (req, res, next) => {
 		// Send email for failed invoice payment
 		// Already handled by Stripe
 	
-	} else if (type === 'invoice.payment_succeeded') {
+	} else if (type === 'customer.subscription.created') {
 
 		// what about downgrade
-		const invoice 			= event.data.object
-		const reason 			= invoice.billing_reason
-		const customerId 		= invoice.customer
-		const subscriptionId 	= invoice.subscription
+		const subscription		= event.data.object
+		const customerId 		= subscription.customer
 
-		const subscription 		= await stripe.subscriptions.retrieve(subscriptionId)
 		const planId 			= subscription.metadata.planId
 		const plan 				= options.plans.find(p => p.id === planId)
-
-		// Only triggers on upgrading or creating subscription
-		if (reason === 'subscription_create' || reason === 'subscription_update') {
 			
-			let user = await options.mongoUser.findOne({ 'stripe.customerId': customerId }).exec()
+		let user = await options.mongoUser.findOne({ 'stripe.customerId': customerId }).exec()
 
-			if (options.onUpgrade && typeof options.onUpgrade === 'function') options.onUpgrade(user, planId)
+		if (options.onUpgrade && typeof options.onUpgrade === 'function') options.onUpgrade(user, planId)
 
-			sendMail("Thank you for upgrading", 
+		sendMail("Thank you for upgrading", 
 `Hello,\n
 This is a confirmation email that you have successfully upgraded your account to the ${plan.name} plan.\n
-If you have any question or suggestion, simply reply to this email.\n
-Glad to have you on board :)`, user.email)
+Glad to have you on board!`, user.email)
 
-		}
 	
 	} else if (type === 'customer.subscription.updated') {
 		
@@ -100,9 +92,9 @@ Glad to have you on board :)`, user.email)
 			}
 		}
 
-		if (options.onSubscriptionChange && typeof options.onSubscriptionChange === 'function') options.onSubscriptionChange(user)
-
 		await user.save()
+
+		if (options.onSubscriptionChange && typeof options.onSubscriptionChange === 'function') options.onSubscriptionChange(user)
 			
 	} else if (type === 'customer.subscription.deleted') {
 
@@ -115,11 +107,14 @@ Glad to have you on board :)`, user.email)
 		user.stripe.subscriptionId = null
 		user.stripe.subscriptionItems = []
 		user.stripe.canceled = false
+
 		await user.save()
+
+		if (options.onCancel && typeof options.onCancel === 'function') options.onCancel(user)
 
 		sendMail(`Subscription canceled - ${options.siteName}`, 
 `Hello,\n
-We inform that your ${options.siteName} subscription was canceled.
+We inform that your ${options.siteName} subscription is now canceled.
 ${options.cancelMailExtra ? options.cancelMailExtra + '\n' : ''}
 We hope to see you back soon!`, user.email)
 
