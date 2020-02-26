@@ -56,36 +56,6 @@ if (upgradablePlans.length) {
 	console.error('Error: there is no plan for this user to upgrade to.')
 }
 
-var elementStyles = {
-	base: {
-		color: '#fff',
-		backgroundColor: '#000',
-		fontWeight: 600,
-		fontFamily: 'Open Sans, Segoe UI, sans-serif',
-		fontSize: '16px',
-		fontSmoothing: 'antialiased',
-		':focus': {
-			color: '#424770',
-		},
-
-		'::placeholder': {
-			color: '#9BACC8',
-		},
-
-		':focus::placeholder': {
-			color: '#CFD7DF',
-		},
-	},
-	invalid: {
-		color: '#fff',
-		':focus': {
-			color: '#FA755A',
-		},
-		'::placeholder': {
-			color: '#FFCCA5',
-		}
-	}
-}
 
 // Automatic coupon detection & confirmation
 const coupon = findGetParameter('coupon')
@@ -104,16 +74,15 @@ if (coupon) {
 
 <% if (!paymentMethods.length) { %>
 
-
 	let elements1 = stripe.elements()
 
-	let cardNumber = elements1.create('cardNumber', options)
+	let cardNumber = elements1.create('cardNumber', elementsOptions)
 	cardNumber.mount('#upgradeForm .cardNumber')
 
-	let cardExpiry = elements1.create('cardExpiry', options)
+	let cardExpiry = elements1.create('cardExpiry', elementsOptions)
 	cardExpiry.mount('#upgradeForm .cardExpiry')
 
-	let cardCvc = elements1.create('cardCvc', options)
+	let cardCvc = elements1.create('cardCvc', elementsOptions)
 	cardCvc.mount('#upgradeForm .cardCvc')
 
 	for (let el of [cardNumber, cardCvc, cardExpiry]) {
@@ -126,7 +95,7 @@ if (coupon) {
 
 function successUpgrading() {
 	$('#upgradeForm .success').show()
-	$('#upgradeForm .success').text("Successfully updated your account. Redirecting you.")
+	$('#upgradeForm .success').text("Success! Redirecting you.")
 
 	setTimeout(() => {
 		// Reload without parameters
@@ -174,6 +143,10 @@ $('#upgradeForm').submit((event) => {
 	$('#upgradeForm .error').text("")
 
 	const plan = $('#upgradeForm [name="upgradePlan"]').val()
+
+	const isSamePlan = "<%= userPlan.id %>" === plan
+
+	if (isSamePlan) return successUpgrading()
 
 	<% if (!paymentMethods.length) { %>
 	

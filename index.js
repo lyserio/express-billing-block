@@ -6,27 +6,25 @@ const ejs 		= require("ejs")
 let stripe = null
 let options = {}
 
-const asyncHandler = fn => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next)
-const beautifyAmount = amount => (amount / 100).toLocaleString('en-US', {  style: 'currency',  currency: 'USD' })
+const {
+	beautifyAmount,
+	asyncHandler, 
+	deepMerge,
+	updateSubscriptionData
+} = require("./utils")
 
-const updateSubscriptionData = async (user, subscription) => {
 
-	if (subscription) {
-		user.stripe.subscriptionId = subscription.id
-		user.stripe.subscriptionItems = subscription.items.data.map(i => {
-			return { 
-				plan: i.plan.id, 
-				id: i.id 
-			}
-		})
-	} else {
-		user.stripe.subscriptionId = null
-		user.stripe.subscriptionItems = []
-		user.plan = 'free'
+const defaultElementsOptions = { style: {
+	base: {
+		fontSmoothing: 'antialiased',
+		fontSize: '16px',
+		lineHeight: '1.7'
+	},
+	invalid: {
+		color: '#fa755a',
+		iconColor: '#fa755a'
 	}
-
-	await user.save()
-}
+}}
 
 router.post('/webhook', asyncHandler(async (req, res, next) => {
 
@@ -142,8 +140,8 @@ const billingInfos = async (customerId, user, context, getInvoices=true) => {
 		upgradablePlans = options.plans.filter(p => options.allowNoUpgrade ? true : p.id !== user.plan)
 	} else {
 		// In this case it's for the upgrade modal 
-		// Which means we don't show the free plan or even the current plan
-		upgradablePlans = options.plans.filter(p => p.id !== 'free' && p.id !== user.plan)
+		// Which means we don't show the current plan or the free plan if it's not
+		upgradablePlans = options.plans.filter(p => (options.allowNoUpgrade ? true : p.id !== 'free') && p.id !== user.plan)
 	}
 
 	if (userPlan) {
@@ -153,6 +151,8 @@ const billingInfos = async (customerId, user, context, getInvoices=true) => {
 		}
 	}
 
+	const stripeElementsOptions = deepMerge(defaultElementsOptions, options.stripeElementsOptions)
+
 	if (!customerId) {
 		return {
 			paymentMethods: [],
@@ -160,6 +160,7 @@ const billingInfos = async (customerId, user, context, getInvoices=true) => {
 			upgradablePlans: upgradablePlans,
 			userPlan: userPlan,
 			subscriptions: [],
+			stripeElementsOptions: stripeElementsOptions,
 			user: user,
 			options: options
 		}
@@ -245,6 +246,7 @@ const billingInfos = async (customerId, user, context, getInvoices=true) => {
 		invoices: getInvoices ? allInvoices : null,
 		subscriptions: subscriptions,
 		user: user,
+		stripeElementsOptions: stripeElementsOptions,
 		options: options
 	}
 }
@@ -266,6 +268,7 @@ router.get('/', asyncHandler(async (req, res, next) => {
 	const data = await billingInfos(customerId, req.user)
 
 	res.render(__dirname+'/views/billing.ejs', data)
+
 }))
 
 router.get('/testcoupon', (req, res, next) => {
@@ -547,6 +550,7 @@ module.exports = (opts) => {
 	sendMail = options.sendMail || function () {}
 	options.plans = options.plans || []
 	options.pages = options.pages || {}
+	options.stripeElementsOptions = options.stripeElementsOptions || {}
 	
 	options.accountPath = options.accountPath || '/account#billing'
 

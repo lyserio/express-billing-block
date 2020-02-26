@@ -226,34 +226,25 @@
 		let stripe = Stripe("<%= options.publicKey %>")
 
 		// Create an instance of the card Element.
-		let options = { style: {
-			base: {
-				fontSmoothing: 'antialiased',
-				fontSize: '16px',
-				lineHeight: '1.7'
-			},
-			invalid: {
-				color: '#fa755a',
-				iconColor: '#fa755a'
-			}
-		}}
+
+		const elementsOptions = <%- JSON.stringify(stripeElementsOptions) %>;
 
 		<% if (options.upgradable) { %> 
 			
 			<%- include('upgrade.js.ejs') %>
 
-		<% } %>
+		<% } %>
 
 		/*** Second element for the adding card flow **/
 		
 		let elements2 = stripe.elements()
-		let cardNumber2 = elements2.create('cardNumber', options)
+		let cardNumber2 = elements2.create('cardNumber', elementsOptions)
 		cardNumber2.mount('#cardForm .cardNumber')
 
-		let cardExpiry2 = elements2.create('cardExpiry', options)
+		let cardExpiry2 = elements2.create('cardExpiry', elementsOptions)
 		cardExpiry2.mount('#cardForm .cardExpiry')
 
-		let cardCvc2 = elements2.create('cardCvc', options)
+		let cardCvc2 = elements2.create('cardCvc', elementsOptions)
 		cardCvc2.mount('#cardForm .cardCvc')
 
 		for (let el of [cardNumber2, cardCvc2, cardExpiry2]) {

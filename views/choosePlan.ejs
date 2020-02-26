@@ -51,23 +51,9 @@
 	<script>
 
 		const stripe = Stripe("<%= options.publicKey %>")
+		const elementsOptions = <%- JSON.stringify(stripeElementsOptions) %>;
 
 		// Create an instance of the card Element.
-		let options = { 
-			style: {
-				base: {
-					lineHeight: '1.5',
-					fontSmoothing: 'antialiased',
-					fontSize: '17px',
-					// backgroundColor: "#00F"
-				},
-				invalid: {
-					color: '#fa755a',
-					iconColor: '#fa755a'
-				}
-			}
-		}
-
 		<%- include('upgrade.js.ejs') %>
 
 	</script>
