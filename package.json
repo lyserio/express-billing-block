@@ -1,6 +1,6 @@
 {
   "name": "express-billing-block",
-  "version": "2.6.4",
+  "version": "2.6.5",
   "description": "Stripe billing and subscription management for Express.",
   "main": "index.js",
   "scripts": {
