@@ -33,7 +33,7 @@
 	<% if (userPlan && options.upgradable) { %> 
 
 		<% if (upgradablePlans.find(p => p.isHigher) ) { %>
-			<p><button type="button" class="btn btn-sm btn-outline-success" data-toggle="modal" data-target="#upgradeModal">Upgrade your plan 🚀</button></p>
+			<p><button type="button" class="btn btn-outline-success" data-toggle="modal" data-target="#upgradeModal">Upgrade your plan 🚀</button></p>
 		<% } %>
 
 		<% if (upgradablePlans.find(p => p.isLower)) { %>
@@ -50,66 +50,115 @@
 
 <% } %>
 
-<h5 class="my-3">Payment method</h5>
+
+<div class="card mt-4">
+	<div class="card-header">
+		Payment methods
 	
-<button type="button" class="btn btn-sm btn-primary" data-toggle="modal" data-target="#cardModal">+ Add a new card</button>
+		<button type="button" class="float-right btn btn-sm btn-primary" data-toggle="modal" data-target="#cardModal">+ Add card</button>
+	</div>
+	<div class="card-body">
+		<ul class="list-group">
+			<% for (let method of paymentMethods) { %>
+				<li class="list-group-item d-flex justify-content-between align-items-center">
 
-<ul class="list-group py-3 mb-1">
-	<% for (let method of paymentMethods) { %>
-		<li class="list-group-item d-flex justify-content-between align-items-center">
+					<span>
+						<img class='mr-3' src='https://rawcdn.githack.com/FreshVine/Payment-Methods-SVG/c441556f81b9a9950ab03d0d96b27fb1493ce22a/icons/cards/<%= method.card.brand %>.svg' width="45" />
+						<small><span class='mr-3'><b class="mr-1">···· ···· ····</b> <%= method.card.last4 %></span>
 
-			<span>
-				<img class='mr-2' src='https://rawcdn.githack.com/FreshVine/Payment-Methods-SVG/c441556f81b9a9950ab03d0d96b27fb1493ce22a/icons/cards/<%= method.card.brand %>.svg' width=30/>
-				 <b>···· ···· ····</b> <%= method.card.last4 %> 
-				 <span class="badge badge-<%= method.card.exp_year > new Date().getFullYear() ? 'success' : ( method.card.exp_year < new Date().getFullYear() ? 'danger' : 'warning') %>">exp <%= method.card.exp_year %></span>
-			</span>
-			
-			<% if (method.isDefault) { %>
-				<span class="badge badge-success">in use</span>
-			<% } else { %>
-				<div>
-					<a href='/billing/setcarddefault?id=<%= method.id %>' class="btn-primary btn btn-sm small">select</a>
-					<a onclick="return confirm('Are you sure you want to delete this card?');" href='/billing/removecard?id=<%= method.id %>' class="text-danger small"><span class="oi oi-trash"></span></a>
+						<span class="<%= method.card.exp_year > new Date().getFullYear() ? '' : ( method.card.exp_year < new Date().getFullYear() ? 'text-danger' : 'text-warning') %>"><%= method.card.exp_month < 10 ? '0'+method.card.exp_month : method.card.exp_month %> / <%= method.card.exp_year %></span></small>
+					</span>
+					
+					<% if (method.isDefault) { %>
+						<span class="badge badge-success badge-outline">default</span>
+					<% } else { %>
+						<small>
+							<a href='/billing/setcarddefault?id=<%= method.id %>'>Set as default</a>
+							<a onclick="return confirm('Are you sure you want to delete this card?');" href='/billing/removecard?id=<%= method.id %>' class="text-danger ml-3">&times; Remove</a>
+						</small>
+					<% } %>
+
+				</li>
+			<% } %>
+		</ul>
+	</div>
+</div>
+
+<% if (locals.customer) { %>
+<div class="card mt-4">
+	<div class="card-header">Billing informations</div>
+	<div class="card-body">
+		<form method="post" action="/billing/customerinfos">
+			<div class="row">
+				<div class="col-sm-6">
+					<div class="form-group">
+						<label>Name</label>
+						<input class='form-control' type="text" value="<%= customer.name || '' %>" name="name" placeholder="John Smith"/>
+					</div>
+					<div class="form-group">
+						<label>Address</label>
+						<input class='form-control' value="<%= customer.address.line1 || '' %>" name="line1" type="text" placeholder="Address line 1"/>
+						<input class='mt-1 form-control' value="<%= customer.address.line2 || '' %>" name="line2" type="text" placeholder="Address line 2"/>
+						<input class='mt-1 form-control' value="<%= customer.address.city || '' %>" name="city" type="text" placeholder="Town / City"/>
+						<input class='mt-1 form-control' value="<%= customer.address.state || '' %>" name="state" type="text" placeholder="State / Province / Region"/>
+						<div class="row">
+							<div class="col">
+								<input class='mt-1 form-control' value="<%= customer.address.postal_code || '' %>"name="postal_code" type="text" placeholder="ZIP / Postal code"/>
+							</div>
+							<div class="col">
+								<select class="mt-1 form-control" name="country">
+									<% for (let code in countries) { %>
+										<option value="<%= code %>" <%= customer.address.country === code ? 'selected' : '' %> ><%= countries[code] %></option>
+									<% } %>
+								</select>
+							</div>
+						</div>
+					</div>
 				</div>
-			<% } %>
-
-		</li>
-	<% } %>
-</ul>
+			</div>
+			<button type="submit" class="btn btn-primary">Save</button>
+		</form>
+	</div>
+</div>
+<% } %>
 
 <% if (invoices.length) { %> 
-	<h5>Billing history</h5>
+<div class="card mt-4">
+	<div class="card-header">Invoices</div>
+	<div class="card-body">
+		<ul class="list-group">				
+			<% for (let invoice of invoices) { %>
+				<li class="list-group-item d-flex justify-content-between align-items-center">
+					<% if (invoice.status === 'draft') { %>
+						<div class='m-0'>
+							Draft invoice for <b><%= invoice.amount %></b>
+							<span class="badge badge-secondary">upcoming</span>
+							<br>
+							<% for (let line of invoice.lines.data.filter(l => l.amount > 0)) { %>
+								<p><small><%= line.description %></small></p>
+							<% } %>
+							<br>
+							<p><small><%= invoice.cleanPeriodStart %> → <%= invoice.cleanPeriodEnd %></small></p>
+						</div>
+					<% } else { %>
+						<p class='m-0'>
+							Invoice for <b><%= invoice.amount %></b>
+							<span class="badge badge-<%= invoice.status === 'paid' ? 'success' : ( invoice.unpaid ? 'danger' : 'warning') %>"><%= invoice.unpaid ? 'payment failed, please update card' : invoice.status %></span>
+							<br>
+							<small><%= invoice.cleanPeriodStart %> → <%= invoice.cleanPeriodEnd %></small>
+						</p>
+					<% } %>
 
-	<ul class="list-group py-3">				
-		<% for (let invoice of invoices) { %>
-			<li class="list-group-item d-flex justify-content-between align-items-center">
-				<% if (invoice.status === 'draft') { %>
-					<div class='m-0'>
-						Draft invoice for <b><%= invoice.amount %></b>
-						<span class="badge badge-secondary">upcoming</span>
-						<br>
-						<% for (let line of invoice.lines.data.filter(l => l.amount > 0)) { %>
-							<p><small><%= line.description %></small></p>
-						<% } %>
-						<br>
-						<p><small><%= invoice.cleanPeriodStart %> → <%= invoice.cleanPeriodEnd %></small></p>
-					</div>
-				<% } else { %>
-					<p class='m-0'>
-						Invoice for <b><%= invoice.amount %></b>
-						<span class="badge badge-<%= invoice.status === 'paid' ? 'success' : ( invoice.unpaid ? 'danger' : 'warning') %>"><%= invoice.unpaid ? 'payment failed, please update card' : invoice.status %></span>
-						<br>
-						<small><%= invoice.cleanPeriodStart %> → <%= invoice.cleanPeriodEnd %></small>
-					</p>
-				<% } %>
-
-				<% if (invoice.invoice_pdf) { %>
-					<a target='_blank' href='<%= invoice.invoice_pdf %>'>↓ Download</a>
-				<% } %>
-			</li>
-		<% } %>
-	</ul>
+					<% if (invoice.invoice_pdf) { %>
+						<a target='_blank' href='<%= invoice.invoice_pdf %>'>↓ Download</a>
+					<% } %>
+				</li>
+			<% } %>
+		</ul>
+	</div>
+</div>
 <% } %>
+
 
 <% if (1 || (options.allowCancel && subscriptions.length && !user.stripe.canceled)) { %>
 
@@ -165,8 +214,6 @@
 				<div class="modal-body">
 					<div class="container-fluid">
 
-						<p><small>Credit and debit cards are supported.</small></p>
-
 						<div class='row mb-2'>
 							<div class='col-6'>
 								<label>Card number</label>
@@ -184,11 +231,11 @@
 
 						<div class='errors text-danger' role="alert"></div>
 						
-						<div class="mt-4 d-flex justify-content-between align-items-end">
-							<small>Card stored securely with <a href='https://stripe.com'>Stripe</a></small>
+						<div class="mt-5 d-flex justify-content-between align-items-end">
+							<small>Credit and debit cards are supported.<br>Card stored securely with <a href='https://stripe.com'>Stripe</a></small>
 
-							<button type="submit" class="btn btn-primary">
-								<span style='display:none' class="spinner-border spinner-border-sm"></span>
+							<button type="submit" class="btn d-flex align-items-center btn-primary">
+								<span style='display:none' class="spinner-border spinner-border-sm mr-2"></span>
 								<span>Add →</span>
 							</button>
 						</div>
@@ -260,7 +307,7 @@
 
 			$.get('/billing/setupintent', data => {
 
-				stripe.handleCardSetup(data.clientSecret, cardNumber2).then((result) => {
+				stripe.confirmCardSetup(data.clientSecret, { payment_method: { card: cardNumber2 }}).then((result) => {
 
 					if (result.error) {
 						$('#cardForm button .spinner-border').hide()
@@ -277,21 +324,22 @@
 						$( document ).trigger( "billing:cardadded" )
 
 						// https://stackoverflow.com/questions/11519660/twitter-bootstrap-modal-backdrop-doesnt-disappear
-						$('#cardModal').modal('hide').on('hidden.bs.modal', function() {
-							billing.reload("#billingSection")
-						})
+						// $('#cardModal').modal('hide').on('hidden.bs.modal', function() {
+							// window.location.href = "<%= options.accountPath %>"
+							window.location.reload()
+						// })
 
 					}).fail(e => {
 						$('#cardForm button .spinner-border').hide()
 						$('#cardForm .error').text("We couldn't add your card. Please try again or with another card.")
 						console.error(e)
 					})
-
-				}).fail(e => {
-					$('#cardForm button .spinner-border').hide()
-					$('#cardForm .card-errors').text("We couldn't contact our servers. Please try again later.")
-					console.error(e)
 				})
+
+			}).fail(e => {
+				$('#cardForm button .spinner-border').hide()
+				$('#cardForm .card-errors').text("We couldn't contact our servers. Please try again later.")
+				console.error(e)
 			})
 		})
 

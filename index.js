@@ -6,6 +6,7 @@ const ejs 		= require("ejs")
 let stripe = null
 let options = {}
 
+
 const {
 	beautifyAmount,
 	asyncHandler, 
@@ -13,6 +14,7 @@ const {
 	updateSubscriptionData
 } = require("./utils")
 
+const countriesList = require("./countries.json")
 
 const defaultElementsOptions = { style: {
 	base: {
@@ -155,6 +157,7 @@ const billingInfos = async (customerId, user, context, getInvoices=true) => {
 
 	if (!customerId) {
 		return {
+			customer: null,
 			paymentMethods: [],
 			invoices: [],
 			upgradablePlans: upgradablePlans,
@@ -166,19 +169,21 @@ const billingInfos = async (customerId, user, context, getInvoices=true) => {
 		}
 	}
 
-	let stripeCustomer = await stripe.customers.retrieve(customerId, {expand: ['subscriptions.data.plan.product']})
+	let customer = await stripe.customers.retrieve(customerId, {expand: ['subscriptions.data.plan.product']})
+	if (!customer.address) customer.address = {}
+
 	let paymentMethods = await stripe.paymentMethods.list({ customer: customerId, type: 'card' })
 
-	paymentMethods = paymentMethods.data.map((m) => {
-		if (m.id === stripeCustomer.invoice_settings.default_payment_method || 
-			m.id === stripeCustomer.default_source) { // default_source will be deprecated (i think)
+	paymentMethods = paymentMethods.data.map(m => {
+		if (customer.invoice_settings.default_payment_method ? m.id === customer.invoice_settings.default_payment_method : 
+			m.id === customer.default_source) { // fallback to default_source for old customers (deprecated)
 			m.isDefault = true
 		}
 
 		return m
 	})
 
-	let subscriptions = stripeCustomer.subscriptions.data
+	let subscriptions = customer.subscriptions.data
 
 	// Make sure we are up to date (if change from Stripe dashboard)
 	const userObj = await options.mongoUser.findById(user.id).exec()
@@ -240,6 +245,7 @@ const billingInfos = async (customerId, user, context, getInvoices=true) => {
 	}
 
 	return {
+		customer: customer,
 		paymentMethods: paymentMethods,
 		upgradablePlans: upgradablePlans,
 		userPlan: userPlan,
@@ -267,7 +273,7 @@ router.get('/', asyncHandler(async (req, res, next) => {
 	const customerId = res.locals.customerId
 	const data = await billingInfos(customerId, req.user)
 
-	res.render(__dirname+'/views/billing.ejs', data)
+	res.render(__dirname+'/views/billing.ejs', { ...data, countries: countriesList })
 
 }))
 
@@ -444,6 +450,27 @@ router.post('/upgrade', asyncHandler(async (req, res, next) => {
 	} 
 
 	next('Unknown error with your subscription. Please try with another card.')
+
+}))
+
+router.post('/customerinfos', asyncHandler(async (req, res, next) => {
+
+	const data = req.body
+	const customerId = res.locals.customerId
+
+	await stripe.customers.update(customerId, {
+		name: data.name,
+		address: {
+			line1: data.line1,
+			line2: data.line2,
+			state: data.state,
+			postal_code: data.postal_code,
+			city: data.city,
+			country: data.country
+		}
+	})
+
+	res.redirect(options.accountPath)
 
 }))
 
