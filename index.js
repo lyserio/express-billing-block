@@ -84,22 +84,25 @@ Glad to have you on board!`, user.email)
 		
 		const subscription 	= event.data.object
 		const currentStatus = subscription.status
-		const planId 		= subscription.metadata.planId
+		// const planId 		= subscription.metadata.planId
 		const customer 		= subscription.customer
 		
 		let user = await options.mongoUser.findOne({'stripe.customerId': customer}).exec()
 
-		if (user.stripe.subscriptionStatus) user.stripe.subscriptionStatus = currentStatus
-
-		if (user.plan) {
-			if (acceptableStatus.includes(currentStatus)) {
-				user.plan = planId
-			} else {
-				user.plan = 'free'
-			}
+		if (user.stripe.subscriptionStatus) {
+			user.stripe.subscriptionStatus = currentStatus
+			await user.save()
 		}
 
-		await user.save()
+
+		// if (user.plan) {
+		// 	if (acceptableStatus.includes(currentStatus)) {
+		// 		user.plan = planId
+		// 	} else {
+		// 		user.plan = 'free'
+		// 	}
+		// }
+
 
 		if (options.onSubscriptionChange && typeof options.onSubscriptionChange === 'function') options.onSubscriptionChange(user)
 			
