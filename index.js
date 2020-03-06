@@ -88,6 +88,7 @@ Glad to have you on board!`, user.email)
 		const customer 		= subscription.customer
 		
 		let user = await options.mongoUser.findOne({'stripe.customerId': customer}).exec()
+		if (!user) return next('Customer not found')
 
 		if (user.stripe.subscriptionStatus) {
 			user.stripe.subscriptionStatus = currentStatus

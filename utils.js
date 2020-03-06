@@ -30,19 +30,15 @@ module.exports = {
 
 	updateSubscriptionData: async (user, subscription) => {
 
-		if (subscription) {
-			user.stripe.subscriptionId = subscription.id
-			user.stripe.subscriptionItems = subscription.items.data.map(i => {
-				return { 
-					plan: i.plan.id, 
-					id: i.id 
-				}
-			})
-		} else {
-			user.stripe.subscriptionId = null
-			user.stripe.subscriptionItems = []
-			user.plan = 'free'
-		}
+		if (!subscription || !user) throw new Error('No subscription data')
+		
+		user.stripe.subscriptionId = subscription.id
+		user.stripe.subscriptionItems = subscription.items.data.map(i => {
+			return { 
+				plan: i.plan.id, 
+				id: i.id 
+			}
+		})
 
 		await user.save()
 	}
