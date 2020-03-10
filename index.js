@@ -411,7 +411,7 @@ router.post('/upgrade', asyncHandler(async (req, res, next) => {
 		}
 	} catch(e) {
 		console.error(e)
-		return next("Error subscribing you to the corrrect plan. Please contact support.")
+		return next("Error subscribing you to the correct plan. Contact support so we can help.")
 	}
 
 	// So the user can start using the app ASAP
