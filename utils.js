@@ -30,7 +30,7 @@ module.exports = {
 
 	updateSubscriptionData: async (user, subscription) => {
 
-		if (!subscription || !user) throw new Error('No subscription data')
+		if (!subscription || !user) return // No subscription data
 		
 		user.stripe.subscriptionId = subscription.id
 		user.stripe.subscriptionItems = subscription.items.data.map(i => {
