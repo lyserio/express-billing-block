@@ -160,7 +160,7 @@
 <% } %>
 
 
-<% if (1 || (options.allowCancel && subscriptions.length && !user.stripe.canceled)) { %>
+<% if (options.allowCancel && subscriptions.length && !user.stripe.canceled) { %>
 
 <p class="mt-3"><small><a class='text-danger' href='javascript:' data-toggle="modal" data-target="#cancelModal">Cancel your subscription</a></small></p>
 
