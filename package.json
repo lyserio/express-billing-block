@@ -1,6 +1,6 @@
 {
   "name": "express-billing-block",
-  "version": "2.7.4",
+  "version": "2.8.0",
   "description": "Stripe billing and subscription management for Express.",
   "main": "index.js",
   "scripts": {
@@ -11,13 +11,13 @@
   "author": "Lyser.io",
   "license": "MIT",
   "dependencies": {
-    "ejs": "^3.0.1",
+    "ejs": "^3.1.2",
     "express": "^4.17.1",
-    "moment": "^2.24.0",
-    "stripe": "^8.37.0"
+    "moment": "^2.25.3",
+    "stripe": "^8.52.0"
   },
   "devDependencies": {
     "eslint": "^6.8.0",
-    "husky": "^4.2.3"
+    "husky": "^4.2.5"
   }
 }

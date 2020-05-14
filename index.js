@@ -138,23 +138,18 @@ We hope to see you back soon!`, user.email)
 
 const billingInfos = async (customerId, user, context, getInvoices=true) => {
 
-	let userPlan = options.plans.find(p => p.id === user.plan)
-	let upgradablePlans = []
-	
-	if (context === 'choosepage') {
-		// All the plans except the one we currently are (usually the free plan)
-		upgradablePlans = options.plans.filter(p => options.allowNoUpgrade ? true : p.id !== user.plan)
-	} else {
-		// In this case it's for the upgrade modal 
-		// Which means we don't show the current plan or the free plan if it's not
-		upgradablePlans = options.plans.filter(p => (options.allowNoUpgrade ? true : p.id !== 'free') && p.id !== user.plan)
-	}
+	// let userPlan = options.plans.find(p => p.id === user.plan)
+	const plans = []
 
-	if (userPlan) {
-		for (let plan of upgradablePlans) {
-			if (plan.order > userPlan.order) plan.isHigher = true
-			else if (plan.order < userPlan.order) plan.isLower = true
-		}
+	for (let plan of options.plans) {
+		let upgradable = options.allowNoUpgrade ? true : plan.id !== user.plan
+		let current = plan.id === user.plan
+		plans.push({
+			upgradable,
+			current,
+			...plan
+		})
+
 	}
 
 	const stripeElementsOptions = deepMerge(defaultElementsOptions, options.stripeElementsOptions)
@@ -164,8 +159,7 @@ const billingInfos = async (customerId, user, context, getInvoices=true) => {
 			customer: null,
 			paymentMethods: [],
 			invoices: [],
-			upgradablePlans: upgradablePlans,
-			userPlan: userPlan,
+			plans: plans,
 			subscriptions: [],
 			stripeElementsOptions: stripeElementsOptions,
 			user: user,
@@ -251,8 +245,7 @@ const billingInfos = async (customerId, user, context, getInvoices=true) => {
 	return {
 		customer: customer,
 		paymentMethods: paymentMethods,
-		upgradablePlans: upgradablePlans,
-		userPlan: userPlan,
+		plans: plans,
 		invoices: getInvoices ? allInvoices : null,
 		subscriptions: subscriptions,
 		user: user,
@@ -260,6 +253,9 @@ const billingInfos = async (customerId, user, context, getInvoices=true) => {
 		options: options
 	}
 }
+
+// for card icons
+router.use('/icons', express.static(__dirname + '/icons/'))
 
 router.use((req, res, next) => {
 	if (!req.user) return next('Login required for billing.')
@@ -273,12 +269,10 @@ router.use((req, res, next) => {
 })
 
 router.get('/', asyncHandler(async (req, res, next) => {
-
 	const customerId = res.locals.customerId
 	const data = await billingInfos(customerId, req.user)
 
 	res.render(__dirname+'/views/billing.ejs', { ...data, countries: countriesList })
-
 }))
 
 router.get('/testcoupon', (req, res, next) => {
@@ -322,12 +316,10 @@ const addCardToCustomer = async (user, customerId, paymentMethodId, cardToken) =
 		customer = await stripe.customers.create({ email: user.email, source: cardToken })
 	}
 
-	let dbUser = await options.mongoUser.findById(user.id).exec()
+	await options.mongoUser.findByIdAndUpdate(user.id, {
+		$set: { "stripe.customerId": customer.id}
+	})
 	
-	dbUser.stripe.customerId = customer.id
-	
-	await dbUser.save()
-
 	return customer.id
 }
 
@@ -341,11 +333,11 @@ router.get('/setupintent', asyncHandler(async (req, res, next) => {
 	res.send({ clientSecret: setupIntent.client_secret })
 }))
 
-router.post('/upgrade', asyncHandler(async (req, res, next) => {
+router.post(['/upgrade', '/api/upgrade'], asyncHandler(async (req, res, next) => {
 
 	const token 		= req.body.token
 	const couponCode 	= req.body.coupon
-	const planId 		= req.body.upgradePlan
+	const planId 		= req.body.upgradePlan || req.body.plan
 
 	// These two are most probably undefined 
 	const subscriptionId = res.locals.subscriptionId
@@ -436,7 +428,7 @@ router.post('/upgrade', asyncHandler(async (req, res, next) => {
 		return next("We couldn't complete the transaction.")
 	}
 
-	// Means user need to do SCA/3DSecure shit to complete payment
+	// Means user need to do SCA/3DSecure to complete payment
 	// "requires_source_action" and "requires_source" are deprecated, only for old API versions
 
 	// Nothing to do anymore
@@ -572,6 +564,84 @@ router.get('/resumesubscription', asyncHandler(async (req, res, next) => {
 router.get('/billing.js', (req, res, next) => {
 	res.sendFile(__dirname+'/billing.js')
 })
+
+// New API conform endpoints
+
+router.get('/api', asyncHandler(async (req, res, next) => {
+
+	const customerId = res.locals.customerId
+	const data = await billingInfos(customerId, req.user)
+
+	res.send({ 
+		...data, 
+		countries: countriesList 
+	})
+}))
+
+router.post('/api/customer', asyncHandler(async (req, res, next) => {
+	const data = req.body
+	const customerId = res.locals.customerId
+
+	await stripe.customers.update(customerId, data)
+
+	res.send({})
+}))
+
+router.put('/api/subscription/cancel', asyncHandler(async (req, res, next) => {
+
+	const subscriptionId = res.locals.subscriptionId
+
+	await stripe.subscriptions.update(subscriptionId, {
+ 		cancel_at_period_end: true
+ 	})
+
+ 	await options.mongoUser.findByIdAndUpdate(req.user.id, {
+		$set: { 'stripe.canceled': true}
+	})
+
+	const feedback = req.body.feedback
+
+	if (feedback && feedback.length) {
+		if (options.notify) options.notify(`${req.user.email} gave a feedback before cancelling:<br/>${feedback}`)
+	}
+
+	res.send({})
+}))
+
+router.put('/api/subscription/resume', asyncHandler(async (req, res, next) => {
+
+	const subscriptionId = res.locals.subscriptionId
+
+	await options.mongoUser.findByIdAndUpdate(req.user.id, {
+		$set: { 'stripe.canceled': false}
+	})
+
+	await stripe.subscriptions.update(subscriptionId, {
+		cancel_at_period_end: false
+	})
+
+	res.send({})
+}))
+
+router.post('/api/cards', asyncHandler(async (req, res, next) => {
+
+	const paymentMethodId = req.body.paymentMethodId
+	const customerId = res.locals.customerId
+
+	await addCardToCustomer(req.user, customerId, paymentMethodId)
+
+	res.send({})
+}))
+
+router.delete('/api/cards/:cardId', asyncHandler(async (req, res, next) => {
+
+	const paymentMethodId = req.params.cardId
+
+	await stripe.paymentMethods.detach(paymentMethodId)
+
+	res.send({})
+}))
+
 
 module.exports = (opts) => {
 	if (opts) options = opts
