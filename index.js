@@ -88,7 +88,10 @@ Glad to have you on board!`, user.email)
 		const customer 		= subscription.customer
 		
 		let user = await options.mongoUser.findOne({'stripe.customerId': customer}).exec()
-		if (!user) return next('Customer not found')
+		if (!user) {
+			res.status(404)
+			return next('Customer not found')
+		}
 
 		if (user.stripe.subscriptionStatus) {
 			user.stripe.subscriptionStatus = currentStatus
@@ -258,7 +261,10 @@ const billingInfos = async (customerId, user, context, getInvoices=true) => {
 router.use('/icons', express.static(__dirname + '/icons/'))
 
 router.use((req, res, next) => {
-	if (!req.user) return next('Login required for billing.')
+	if (!req.user) {
+		res.status(403)
+		return next('Login required for billing.')
+	}
 
 	res.locals.customerId = req.user.stripeCustomerId || (req.user.stripe ? req.user.stripe.customerId : null)
 	res.locals.subscriptionId = req.user.subscription || (req.user.stripe ? req.user.stripe.subscriptionId : null)
