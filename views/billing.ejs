@@ -30,15 +30,9 @@
 
 	<% } %>
 
-	<% if (userPlan && options.upgradable) { %> 
+	<% if (plans.find(p => p.current) && options.upgradable) { %> 
 
-		<% if (upgradablePlans.find(p => p.isHigher) ) { %>
-			<p><button type="button" class="btn btn-outline-success" data-toggle="modal" data-target="#upgradeModal">Upgrade your plan 🚀</button></p>
-		<% } %>
-
-		<% if (upgradablePlans.find(p => p.isLower)) { %>
-			<p><small><a href='#' data-toggle="modal" data-target="#upgradeModal">Downgrade your plan</a></small></p>
-		<% } %>
+		<p><button type="button" class="btn btn-outline-success" data-toggle="modal" data-target="#upgradeModal">Change your plan 🚀</button></p>
 	
 	<% } %>
 
