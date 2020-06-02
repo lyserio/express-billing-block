@@ -99,7 +99,7 @@
 
 	<div class="cardContainer flex-column align-items-md-stretch align-items-center flex-md-row">
 
-		<% for (let plan of upgradablePlans) { %>
+		<% for (let plan of plans.filter(p => p.upgradable)) { %>
 			<div data-trial='<%= plan.trial || 0 %>' data-name='<%= plan.name %>' data-plan='<%= plan.id %>' class="plan">
 				<!-- <span class="h6 w-60 mx-auto px-4 py-1 rounded-bottom bg-primary text-white shadow-sm">
 					<%= plan.name %>

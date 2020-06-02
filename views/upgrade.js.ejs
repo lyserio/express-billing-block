@@ -42,7 +42,7 @@ function findGetParameter(parameterName) {
 
 // Select plan in ?plan or the default one
 const defaultPlan = findGetParameter('plan')
-const upgradablePlans = <%- JSON.stringify(upgradablePlans) %>;
+const upgradablePlans = (<%- JSON.stringify(plans) %>).filter(p => p.upgradable);
 
 if (upgradablePlans.length) {
 
@@ -144,7 +144,7 @@ $('#upgradeForm').submit((event) => {
 
 	const plan = $('#upgradeForm [name="upgradePlan"]').val()
 
-	const isSamePlan = "<%= userPlan ? userPlan.id : '' %>" === plan
+	const isSamePlan = "<%= plans.find(p => p.current) ? plans.find(p => p.current).id : '' %>" === plan
 
 	if (isSamePlan) return successUpgrading()
 
